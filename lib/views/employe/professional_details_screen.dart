@@ -1,0 +1,339 @@
+import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/verification_screen.dart';
+
+class ProfessionalDetailsScreen extends StatefulWidget {
+  const ProfessionalDetailsScreen({super.key});
+
+  @override
+  State<ProfessionalDetailsScreen> createState() =>
+      _ProfessionalDetailsScreenState();
+}
+
+class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
+  String? experience;
+  double workRadius = 5;
+  TextEditingController rateController = TextEditingController(text: "700");
+  String availability = "Full - Time";
+  TextEditingController aboutController = TextEditingController();
+
+  final services = [
+    {"icon": Icons.plumbing, "label": "Plumber"},
+    {"icon": Icons.format_paint, "label": "Painting"},
+    {"icon": Icons.electrical_services, "label": "Electrician"},
+    {"icon": Icons.handyman, "label": "Carpentry"},
+    {"icon": Icons.add_circle, "label": "Custom"},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFD54F), Color(0xFF9CCC65)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // AppBar Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        "Join As a Employee",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 48), // balance
+                  ],
+                ),
+              ),
+
+              const Text(
+                "Fill in your profile to receive job offers",
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    _buildStep("Personal Info",false ),
+                    _buildStep("Professional", true),
+                    _buildStep("Verification", false),
+                    _buildStep("Agreement", false),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Form Card
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Professional Details",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Dropdown - Experience
+                        DropdownButtonFormField<String>(
+                          value: experience,
+                          hint: const Text("Select Experience Level"),
+                          decoration: _inputDecoration(),
+                          items: [
+                            "Fresher",
+                            "1-3 Years",
+                            "3-5 Years",
+                            "5+ Years"
+                          ]
+                              .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e),
+                          ))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              experience = val;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Services Grid
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: services.map((s) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 20),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 30,
+                                      backgroundColor: Colors.grey.shade200,
+                                      child: Icon(
+                                        s["icon"] as IconData,
+                                        size: 30,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(s["label"] as String),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Slider
+                        const Text("Work Radius"),
+                        Slider(
+                          value: workRadius,
+                          min: 1,
+                          max: 50,
+                          divisions: 49,
+                          label: "${workRadius.toInt()} KM",
+                          onChanged: (val) {
+                            setState(() {
+                              workRadius = val;
+                            });
+                          },
+                        ),
+                        Text("${workRadius.toInt()} KM"),
+
+                        const SizedBox(height: 16),
+
+                        // Hourly Rate
+                        TextFormField(
+                          controller: rateController,
+                          decoration: _inputDecoration(
+                            hint: "₹ 700",
+                            label: "Hourly Rate (₹)",
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          "Suggested Range: ₹500 - ₹1000 per hour",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Availability Dropdown
+                        DropdownButtonFormField<String>(
+                          value: availability,
+                          decoration: _inputDecoration(label: "Availability"),
+                          items: ["Full - Time", "Part - Time"]
+                              .map((e) =>
+                              DropdownMenuItem(value: e, child: Text(e)))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              availability = val!;
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // About
+                        TextFormField(
+                          controller: aboutController,
+                          maxLines: 3,
+                          decoration: _inputDecoration(
+                            hint: "Tell Us About Your Work Experience",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Bottom Buttons
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                        ),
+                        child: const Text("PREVIOUS"),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const VerificationScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                        ),
+                        child: const Text("NEXT"),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({String? hint, String? label}) {
+    return InputDecoration(
+      hintText: hint,
+      labelText: label,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    );
+  }
+}
+
+class StepChip extends StatelessWidget {
+  final String label;
+  final bool active;
+
+  const StepChip({super.key, required this.label, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: active ? Colors.white : Colors.black,
+          fontSize: 12,
+        ),
+      ),
+      backgroundColor: active ? Colors.green : Colors.grey.shade300,
+    );
+  }
+}
+
+Widget _buildStep(String title, bool isActive) {
+  return Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.green : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 9,
+            color: isActive ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
