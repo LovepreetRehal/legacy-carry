@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 
 import 'employe/dashboard_screen.dart';
+import 'models/UserData.dart';
 
 class VerificationScreen extends StatelessWidget {
-  const VerificationScreen({super.key});
+  final UserData userData;
+
+
+  const VerificationScreen({
+    super.key,
+    required this.userData, // ✅ Required data
+  });
+
+
 
   @override
   Widget build(BuildContext context) {
     final idController = TextEditingController();
     final otpControllers = List.generate(4, (_) => TextEditingController());
 
-    return Scaffold(
+     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:legacy_carry/views/employe/professional_details_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:legacy_carry/views/viewmodels/send_otp_viewmodel.dart';
+import 'professional_details_screen.dart';
 
 class EmployeeRegisterScreen extends StatelessWidget {
   const EmployeeRegisterScreen({super.key});
@@ -24,7 +24,17 @@ class _EmployeeRegisterContent extends StatefulWidget {
 }
 
 class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+  TextEditingController();
+
+  // 6 OTP fields
+  final List<TextEditingController> _otpControllers =
+  List.generate(6, (_) => TextEditingController());
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +57,12 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Bar
+                // 🔙 Top Bar
                 Row(
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
                     const Text(
@@ -77,7 +85,7 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                 ),
                 const SizedBox(height: 16),
 
-                // Stepper Tabs
+                // 🧭 Stepper Tabs
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -95,7 +103,7 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                 ),
                 const SizedBox(height: 20),
 
-                // Form Card
+                // 📝 Form Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
@@ -106,35 +114,31 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Personal Information",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      _buildTextField(
+                        "Name*",
+                        Icons.person_outline,
+                        controller: _nameController,
+                        hint: "John Doe",
                       ),
-                      const SizedBox(height: 16),
-
-                      // Name
-                      _buildTextField("Name*", Icons.person_outline,
-                          hint: "John Doe"),
-
                       const SizedBox(height: 12),
-                      // Email
-                      _buildTextField("Email Address*", Icons.email_outlined,
-                          hint: "info@gmail.com"),
 
+                      _buildTextField(
+                        "Email Address*",
+                        Icons.email_outlined,
+                        controller: _emailController,
+                        hint: "info@gmail.com",
+                      ),
                       const SizedBox(height: 12),
-                      // Phone with verify
+
+                      // 📞 Phone with Verify
                       Row(
                         children: [
                           Expanded(
                             child: _buildTextField(
                               "Phone Number*",
                               Icons.phone_outlined,
-                              hint: "+91-9876543210",
                               controller: _phoneController,
+                              hint: "+91-9876543210",
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -156,22 +160,19 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                               );
 
                               if (otpVm.status == OtpStatus.success) {
+
+
                                 ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                    Text("OTP Sent Successfully"),
-                                  ),
-                                );
+                                    .showSnackBar(const SnackBar(
+                                  content: Text("OTP Sent Successfully"),
+                                ));
                               } else if (otpVm.status ==
                                   OtpStatus.error) {
                                 ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        "Error: ${otpVm.errorMessage}"),
-                                  ),
-                                );
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      "Error: ${otpVm.errorMessage}"),
+                                ));
                               }
                             },
                             child: otpVm.status == OtpStatus.loading
@@ -187,19 +188,22 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 12),
-                      // OTP fields
+
+                      // 🔢 OTP fields
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: List.generate(
                           6,
                               (index) => SizedBox(
-                            width: 50,
+                            width: 45,
                             child: TextField(
+                              controller: _otpControllers[index],
                               textAlign: TextAlign.center,
                               keyboardType: TextInputType.number,
+                              maxLength: 1,
                               decoration: InputDecoration(
+                                counterText: "",
                                 filled: true,
                                 fillColor: Colors.white,
                                 border: OutlineInputBorder(
@@ -210,27 +214,38 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 12),
-                      // Address
-                      _buildTextField("Current Address*", Icons.location_on,
-                          hint: "India"),
 
+                      _buildTextField(
+                        "Current Address*",
+                        Icons.location_on,
+                        controller: _addressController,
+                        hint: "India",
+                      ),
                       const SizedBox(height: 12),
-                      // Password
-                      _buildTextField("Password*", Icons.lock_outline,
-                          hint: "Set Password", obscure: true),
 
+                      _buildTextField(
+                        "Password*",
+                        Icons.lock_outline,
+                        controller: _passwordController,
+                        hint: "Set Password",
+                        obscure: true,
+                      ),
                       const SizedBox(height: 12),
-                      // Confirm Password
-                      _buildTextField("Confirm Password*", Icons.lock_outline,
-                          hint: "Confirm Password", obscure: true),
+
+                      _buildTextField(
+                        "Confirm Password*",
+                        Icons.lock_outline,
+                        controller: _confirmPasswordController,
+                        hint: "Confirm Password",
+                        obscure: true,
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // Next button
+                // 🚀 Next button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -241,17 +256,27 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text("NEXT"),
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      final otpCode = _otpControllers
+                          .map((controller) => controller.text)
+                          .join();
+
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const ProfessionalDetailsScreen(),
+                          builder: (context) => ProfessionalDetailsScreen(
+                            name: _nameController.text.trim(),
+                            email: _emailController.text.trim(),
+                            phone: _phoneController.text.trim(),
+                            address: _addressController.text.trim(),
+                            password: _passwordController.text.trim(),
+                            otp: otpCode,
+                          ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text("NEXT"),
                   ),
                 ),
               ],
@@ -262,7 +287,6 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
     );
   }
 
-  // Step builder
   Widget _buildStep(String title, bool isActive) {
     return Expanded(
       child: Container(
@@ -285,7 +309,6 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
     );
   }
 
-  // Custom text field builder
   Widget _buildTextField(
       String title,
       IconData icon, {

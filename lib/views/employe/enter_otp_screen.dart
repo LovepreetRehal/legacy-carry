@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/employe/dashboard_screen.dart';
 import 'package:provider/provider.dart';
 import '../employe/select_type_screen.dart';
+import '../resident/resident_dashboard_screen.dart';
 import '../viewmodels/verify_otp_view_model.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
@@ -189,6 +191,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             );
 
                             if (otpVM.status == OtpStatus.success) {
+                              final user = otpVM.otpResponse?['user'];
+                              final role = user?['role']?.toString().toLowerCase();
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text("OTP Verified ✅"),
@@ -196,26 +201,41 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                 ),
                               );
 
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                  const SelectTypeScreen(),
-                                ),
-                              );
-                            } else if (otpVM.status == OtpStatus.error) {
+                              // Navigate based on role
+                              if (role == 'customer') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const ResidentDashboardScreen()),
+                                );
+                              } else if (role == 'labor') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const DashboardScreen()), // Example admin screen
+                                );
+                              } else {
+                                // Default fallback screen
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+                                );
+                              }
+                            }
+                            else if (otpVM.status == OtpStatus.error) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(otpVM.errorMessage),
+                                const SnackBar(
+                                  content: Text(
+                                    // otpVM.errorMessage.isNotEmpty
+                                    //     ? otpVM.errorMessage
+                                    //     : "Something went wrong. Please try again.",
+                                        "User Not found",
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
+
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                  const SelectTypeScreen(),
-                                ),
+                                MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
                               );
                             }
                           },

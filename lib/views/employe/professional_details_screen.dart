@@ -1,8 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/verification_screen.dart';
 
+import '../models/UserData.dart';
+
 class ProfessionalDetailsScreen extends StatefulWidget {
-  const ProfessionalDetailsScreen({super.key});
+  final String name;
+  final String email;
+  final String phone;
+  final String address;
+  final String password;
+  final String otp;
+
+  const ProfessionalDetailsScreen({
+    super.key,
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.address,
+    required this.password,
+    required this.otp,
+  });
+
+
 
   @override
   State<ProfessionalDetailsScreen> createState() =>
@@ -169,7 +188,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                         // Slider
                         const Text("Work Radius"),
                         Slider(
-                          value: workRadius,
+                            value: workRadius,
                           min: 1,
                           max: 50,
                           divisions: 49,
@@ -252,11 +271,44 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          print("=== Personal Details ===");
+                          print("Name: ${widget.name}");
+                          print("Email: ${widget.email}");
+                          print("Phone: ${widget.phone}");
+                          print("Address: ${widget.address}");
+                          print("Password: ${widget.password}");
+                          print("OTP: ${widget.otp}");
 
+                          print("=== Professional Details ===");
+                          print("Experience: $experience");
+                          print("Work Radius: ${workRadius.toInt()} KM");
+                          print("Hourly Rate: ${rateController.text}");
+                          print("Availability: $availability");
+                          print("About: ${aboutController.text}");
+
+
+                          final userData = UserData(
+                            name: widget.name,
+                            email: widget.email,
+                            phone: widget.phone,
+                            address: widget.address,
+                            password: widget.password,
+                            otp: widget.otp,
+                            experience: experience,
+                            workRadius: workRadius,
+                            rate: rateController.text,
+                            availability: availability,
+                            about: aboutController.text,
+                          );
+
+
+                          // ✅ Pass this object to VerificationScreen
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const VerificationScreen(),
+                              builder: (context) => VerificationScreen(
+                                userData: userData,
+                              ),
                             ),
                           );
                         },

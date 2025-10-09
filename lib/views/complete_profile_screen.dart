@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
 import 'employe/select_type_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -18,81 +15,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   String? selectedResidentialStatus;
   String? selectedPaymentMethod;
-
-  String? selectedCountry;
-  String? selectedState;
-  String? selectedCity;
-
-  List<dynamic> countries = [];
-  List<dynamic> states = [];
-  List<dynamic> cities = [];
+  String? selectedState = "Punjab";
+  String? selectedDistrict = "Patiala";
 
   final residentialOptions = ["Society", "Individual", "Commercial"];
   final paymentOptions = ["Bank Transfer", "Cash", "UPI"];
-
-  bool isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchCountries();
-  }
-
-  Future<void> fetchCountries() async {
-    setState(() {
-      isLoading = true;
-    });
-    try {
-      final response = await http.get(
-        Uri.parse('{{live_link}}/countries'), // 👈 Replace {{live_link}} with real link
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          countries = data;
-        });
-      } else {
-        debugPrint("Failed to load countries: ${response.statusCode}");
-      }
-    } catch (e) {
-      debugPrint("Error fetching countries: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void onCountrySelected(String? countryName) {
-    setState(() {
-      selectedCountry = countryName;
-      selectedState = null;
-      selectedCity = null;
-
-      final country = countries.firstWhere(
-            (c) => c['name'] == countryName,
-        orElse: () => null,
-      );
-
-      states = country != null ? country['states'] ?? [] : [];
-      cities = [];
-    });
-  }
-
-  void onStateSelected(String? stateName) {
-    setState(() {
-      selectedState = stateName;
-      selectedCity = null;
-
-      final state = states.firstWhere(
-            (s) => s['name'] == stateName,
-        orElse: () => null,
-      );
-
-      cities = state != null ? state['cities'] ?? [] : [];
-    });
-  }
 
   @override
   void dispose() {
@@ -102,12 +29,46 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     super.dispose();
   }
 
+  void handleSaveAndContinue() {
+    final name = fullNameController.text.trim();
+    final email = emailController.text.trim();
+    final village = villageController.text.trim();
+
+    // Print or use the collected values
+    debugPrint('===============================');
+    debugPrint('Full Name: $name');
+    debugPrint('Email: $email');
+    debugPrint('Residential Status: $selectedResidentialStatus');
+    debugPrint('State: $selectedState');
+    debugPrint('District: $selectedDistrict');
+    debugPrint('Village/Town: $village');
+    debugPrint('Payment Method: $selectedPaymentMethod');
+    debugPrint('===============================');
+
+    // You can also create a Map to send to API easily 👇
+    final profileData = {
+      "full_name": name,
+      "email": email,
+      "residential_status": selectedResidentialStatus,
+      "state": selectedState,
+      "district": selectedDistrict,
+      "village": village,
+      "payment_method": selectedPaymentMethod,
+    };
+
+    debugPrint("Profile Data Map: $profileData");
+
+    // 👉 Navigate to next screen after saving data
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Container(
+      body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
@@ -115,15 +76,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF5C041),
-              Color(0xFF3CA349),
+              Color(0xFFF5C041), // top yellowish
+              Color(0xFF3CA349), // bottom green
             ],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -161,16 +121,19 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       TextField(
                         controller: fullNameController,
                         decoration: const InputDecoration(
+                          hintText: "Enter Your Name",
                           labelText: "Full Name",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
                       const SizedBox(height: 12),
+
                       TextField(
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
+                          hintText: "Enter Email Address",
                           labelText: "Email",
                           border: OutlineInputBorder(),
                           isDense: true,
@@ -178,65 +141,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      /// Country Dropdown
-                      DropdownButtonFormField<String>(
-                        value: selectedCountry,
-                        items: countries
-                            .map((c) => DropdownMenuItem<String>(
-                          value: c['name'],
-                          child: Text(c['name']),
-                        ))
-                            .toList(),
-                        onChanged: onCountrySelected,
-                        decoration: const InputDecoration(
-                          labelText: "Select Country",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      /// State Dropdown
-                      DropdownButtonFormField<String>(
-                        value: selectedState,
-                        items: states
-                            .map((s) => DropdownMenuItem<String>(
-                          value: s['name'],
-                          child: Text(s['name']),
-                        ))
-                            .toList(),
-                        onChanged: onStateSelected,
-                        decoration: const InputDecoration(
-                          labelText: "Select State",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      /// City Dropdown
-                      DropdownButtonFormField<String>(
-                        value: selectedCity,
-                        items: cities
-                            .map((c) => DropdownMenuItem<String>(
-                          value: c['name'],
-                          child: Text(c['name']),
-                        ))
-                            .toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedCity = val;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "Select City",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      /// Residential
                       DropdownButtonFormField<String>(
                         value: selectedResidentialStatus,
                         items: residentialOptions
@@ -251,7 +155,49 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           });
                         },
                         decoration: const InputDecoration(
-                          labelText: "Residential Status",
+                          labelText: "Select your Residential Status",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      DropdownButtonFormField<String>(
+                        value: selectedState,
+                        items: const [
+                          DropdownMenuItem(
+                            value: "Punjab",
+                            child: Text("Punjab"),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            selectedState = val;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: "Select State",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      DropdownButtonFormField<String>(
+                        value: selectedDistrict,
+                        items: const [
+                          DropdownMenuItem(
+                            value: "Patiala",
+                            child: Text("Patiala"),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            selectedDistrict = val;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: "Select Distt/City",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -261,6 +207,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       TextField(
                         controller: villageController,
                         decoration: const InputDecoration(
+                          hintText: "Enter Address",
                           labelText: "Village/Town",
                           border: OutlineInputBorder(),
                           isDense: true,
@@ -293,16 +240,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // You can now send the selected country/state/city to your create-user API
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                const SelectTypeScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: handleSaveAndContinue,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green[700],
                             shape: RoundedRectangleBorder(

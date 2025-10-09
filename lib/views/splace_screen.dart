@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/complete_profile_screen.dart';
+import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 
 import 'employe/choose_language_screen.dart';
 import 'employe/login_screen.dart';
+import 'employe/select_type_screen.dart';
+import 'employe/sign_in_with_number_screen.dart';
 
 class SplaceScreen extends StatelessWidget {
   const SplaceScreen({super.key});
@@ -29,9 +33,8 @@ class SplaceScreen extends StatelessWidget {
             // Logo
             Image.asset(
               "resources/image/logo.png", // add your logo
-              height: 200,
-              width: 300,
-              fit: BoxFit.cover, // 🔥 behaves like "centerCrop"
+              height: 100,
+              width: 200,
 
             ),
             const SizedBox(height: 10),
@@ -70,7 +73,9 @@ class SplaceScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ChooseLanguageScreen()),
+                  MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
+
+                  // MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
                 );
 
               },

@@ -7,14 +7,14 @@ import '../dashboard/edit_profie.dart';
 import '../dashboard/messages_screen.dart';
 import '../dashboard/settings_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+class ResidentDashboardScreen extends StatefulWidget {
+  const ResidentDashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<ResidentDashboardScreen> createState() => _ResidentDashboardScreen();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _ResidentDashboardScreen extends State<ResidentDashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [

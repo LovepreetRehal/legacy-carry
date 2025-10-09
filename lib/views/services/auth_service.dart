@@ -142,4 +142,31 @@ class AuthService {
     }
   }
 
+
+  // services/auth_service.dart
+
+  Future<Map<String, dynamic>> getUserProfile({required String token}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/profile'), // assuming endpoint is /profile
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token', // add token if API requires auth
+      },
+    );
+
+    print("getUserProfile response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['status'] == true) {
+        return json; // you can also return json['data'] if you only need the profile data
+      } else {
+        throw Exception(json['message'] ?? 'Failed to fetch profile');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+
 }

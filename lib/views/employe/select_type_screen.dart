@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../employe/employee_register_screen.dart';
+import '../resident/post_a_job_one.dart';
 
 class SelectTypeScreen extends StatefulWidget {
   const SelectTypeScreen({super.key});
@@ -91,12 +92,37 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
                     onPressed: selectedRole == null
                         ? null
                         : () {
-                      // TODO: Navigate to next screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const EmployeeRegisterScreen()),
-                      );
                       print("Selected role: $selectedRole");
+
+                      if (selectedRole == "employee") {
+                        // ✅ Go to Employee registration
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EmployeeRegisterScreen(),
+                          ),
+                        );
+                      } else if (selectedRole == "employer") {
+                        // ✅ Go to Employee registration
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PostAJobOne(),
+                          ),
+                        );
+                      }
+                      else {
+                        // 🚧 Show Coming Soon dialog or snackbar
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Security Guard registration coming soon!",
+                            ),
+                            backgroundColor: Colors.orange,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
                     label: const Text(
