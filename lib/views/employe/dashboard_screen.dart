@@ -6,6 +6,7 @@ import 'package:legacy_carry/views/dashboard/search_screen.dart';
 import '../dashboard/edit_profie.dart';
 import '../dashboard/messages_screen.dart';
 import '../dashboard/settings_screen.dart';
+import 'employee_home_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,12 +19,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomeScreen(),    // Dashboard / Home
+    const EmployeeHomeScreen(),    // Dashboard / Home
     const SearchJobsScreen(),
     const MyJobsScreen(),
     const MessagesScreen(),
     const SettingsScreen(),
-    const EditProfileScreen(token: '44|Bgi9FUHgwnw5U8GLkZtIYPdF8BtkCAa2TyIsaKe5e999b938',),
+    const EditProfileScreen(),
     // const Center(child: Text("Profile Page")),
   ];
 

@@ -1,25 +1,42 @@
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
 import 'employe/dashboard_screen.dart';
 import 'models/UserData.dart';
+import 'models/sign_up_request.dart';
+import 'viewmodels/signup_viewmodel.dart';
 
 class VerificationScreen extends StatelessWidget {
-  final UserData userData;
+  final UserData userData; // store the passed user data
 
+  const VerificationScreen({super.key, required this.userData});
 
-  const VerificationScreen({
-    super.key,
-    required this.userData, // ✅ Required data
-  });
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => SignUpViewModel(),
+      child: _VerifyScreenContent(userData: userData),
+    );
+  }
+}
 
+class _VerifyScreenContent extends StatefulWidget {
+  final UserData userData; // ✅ store the UserData as a field
 
+  const _VerifyScreenContent({required this.userData, Key? key}) : super(key: key);
+
+  @override
+  State<_VerifyScreenContent> createState() => _VerifyScreenContentState();
+}
+
+class _VerifyScreenContentState extends State<_VerifyScreenContent> {
+  final TextEditingController phoneController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final idController = TextEditingController();
     final otpControllers = List.generate(4, (_) => TextEditingController());
 
-     return Scaffold(
+    return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -28,9 +45,9 @@ class VerificationScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFDFB139), // yellow top
-              Color(0xFFB9AE3C), // mid olive
-              Color(0xFF3CA349), // green bottom
+              Color(0xFFDFB139),
+              Color(0xFFB9AE3C),
+              Color(0xFF3CA349),
             ],
             stops: [0.0, 0.48, 1.0],
           ),
@@ -39,7 +56,7 @@ class VerificationScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔙 Back button
+              // Back button
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black),
                 onPressed: () => Navigator.pop(context),
@@ -75,7 +92,7 @@ class VerificationScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    _buildStep("Personal Info",false ),
+                    _buildStep("Personal Info", false),
                     _buildStep("Professional", false),
                     _buildStep("Verification", true),
                     _buildStep("Agreement", false),
@@ -105,7 +122,6 @@ class VerificationScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Section Title
                           const Text(
                             "Verification Documents",
                             style: TextStyle(
@@ -226,10 +242,56 @@ class VerificationScreen extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  onPressed: () {
-                                    // TODO: Go to next step
-                                    showVerificationDialog(context);
+                                  onPressed: () async {
+                                    final otp = otpControllers.map((c) => c.text).join();
+                                    final idNumber = idController.text;
 
+                                    // Print userData
+                                    print("=== User Data ===");
+                                    print("Name: ${widget.userData.name}");
+                                    print("Phone: ${widget.userData.phone}");
+                                    print("Email: ${widget.userData.email}");
+                                    print("Password: ${widget.userData.password}");
+                                    print("Experience: ${widget.userData.experience}");
+                                    print("Work Radius: ${widget.userData.workRadius}");
+                                    print("Rate: ${widget.userData.rate}");
+                                    print("About: ${widget.userData.about}");
+                                    print("Availability: ${widget.userData.availability}");
+                                    print("ID Number: $idNumber");
+                                    print("OTP: $otp");
+
+                                    final signUpViewModel =
+                                    Provider.of<SignUpViewModel>(context, listen: false);
+
+                                    // Build request from actual userData
+                                    final request = SignUpRequest(
+                                      name: widget.userData.name,
+                                      phone: widget.userData.phone,
+                                      email: widget.userData.email,
+                                      password: widget.userData.password,
+                                      role: "labor",
+                                      otp: otp,
+                                      experienceYears: widget.userData.experience ?? "0",
+                                      services: ["Plumbing"], // Replace as needed
+                                      workRadiusKm: widget.userData.workRadius?.toInt() ?? 0,
+                                      hourlyRate: int.tryParse(widget.userData.rate ?? "0") ?? 0,
+                                      availability: widget.userData.availability ?? "true",
+                                      about: widget.userData.about ?? "",
+                                      idNumber: idNumber,
+                                    );
+
+                                    await signUpViewModel.signUp(request);
+
+                                    if (signUpViewModel.status == SignUpStatus.success) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                                      );
+                                    } else if (signUpViewModel.status == SignUpStatus.error) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text("Signup failed: ${signUpViewModel.errorMessage}")),
+                                      );
+                                    }
                                   },
                                   child: const Text("NEXT"),
                                 ),
@@ -247,71 +309,7 @@ class VerificationScreen extends StatelessWidget {
         ),
       ),
     );
-
-
   }
-
-}
-
-Future<void> showVerificationDialog(BuildContext context) async {
-  return showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.verified,
-                color: Colors.green,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "VERIFICATION",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Your identity will be verified by our team.\n"
-                    "You can still receive requests but won’t get\n"
-                    "payouts until verified.",
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DashboardScreen(),
-                    ),
-                  );
-
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }
 
 Widget _buildStep(String title, bool isActive) {

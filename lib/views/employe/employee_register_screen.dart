@@ -263,6 +263,7 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                           .map((controller) => controller.text)
                           .join();
 
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -276,6 +277,9 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                           ),
                         ),
                       );
+
+
+
                     },
                   ),
                 ),

@@ -23,7 +23,7 @@ class _ResidentDashboardScreen extends State<ResidentDashboardScreen> {
     const MyJobsScreen(),
     const MessagesScreen(),
     const SettingsScreen(),
-    const EditProfileScreen(token: '44|Bgi9FUHgwnw5U8GLkZtIYPdF8BtkCAa2TyIsaKe5e999b938',),
+    const EditProfileScreen(),
     // const Center(child: Text("Profile Page")),
   ];
 

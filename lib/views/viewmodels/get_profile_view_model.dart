@@ -16,12 +16,12 @@ class GetProfileViewModel extends ChangeNotifier {
   Map<String, dynamic>? get profileData => _profileData;
 
   /// Fetch user profile
-  Future<void> fetchProfile(String token) async {
+  Future<void> fetchProfile() async {
     _status = ProfileStatus.loading;
     notifyListeners();
 
     try {
-      final data = await _authService.getUserProfile(token: token);
+      final data = await _authService.getUserProfile();
       _profileData = data['data']; // assuming API returns {status: true, data: {...}}
       _status = ProfileStatus.success;
     } catch (e) {

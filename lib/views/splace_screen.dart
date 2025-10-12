@@ -1,14 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:legacy_carry/views/complete_profile_screen.dart';
-import 'package:legacy_carry/views/resident/post_a_job_one.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'employe/choose_language_screen.dart';
-import 'employe/login_screen.dart';
-import 'employe/select_type_screen.dart';
-import 'employe/sign_in_with_number_screen.dart';
+import 'package:legacy_carry/views/employe/select_type_screen.dart';
+import 'package:legacy_carry/views/employe/dashboard_screen.dart';
+import 'package:legacy_carry/views/resident/resident_dashboard_screen.dart';
+import 'package:legacy_carry/views/employe/sign_in_with_number_screen.dart';
 
-class SplaceScreen extends StatelessWidget {
+class SplaceScreen extends StatefulWidget {
   const SplaceScreen({super.key});
+
+  @override
+  State<SplaceScreen> createState() => _SplaceScreenState();
+}
+
+class _SplaceScreenState extends State<SplaceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _navigateAfterDelay();
+  }
+
+  Future<void> _navigateAfterDelay() async {
+    // Wait a bit for splash effect
+    await Future.delayed(const Duration(seconds: 2));
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final role = prefs.getString('user_role');
+
+    debugPrint("🔑 Saved Token: $token");
+    debugPrint("🧑‍💼 Saved Role: $role");
+
+    if (token != null && role != null) {
+      // ✅ User already logged in, navigate based on role
+      if (role == 'customer') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ResidentDashboardScreen(),
+          ),
+        );
+      } else if (role == 'labor') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const DashboardScreen(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SignInWithNumberScreen(),
+          ),
+        );
+      }
+    } else {
+      // ❌ No login info found → Go to sign-in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SignInWithNumberScreen(),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +80,7 @@ class SplaceScreen extends StatelessWidget {
               Color(0xFFB9AE3C), // #B9AE3C at 48%
               Color(0xFF3CA349), // #3CA349 at 100%
             ],
-            stops: [0.0, 0.48, 1.0], // matching CSS stops
+            stops: [0.0, 0.48, 1.0],
           ),
         ),
         child: Column(
@@ -32,10 +88,9 @@ class SplaceScreen extends StatelessWidget {
           children: [
             // Logo
             Image.asset(
-              "resources/image/logo.png", // add your logo
+              "resources/image/logo.png",
               height: 100,
               width: 200,
-
             ),
             const SizedBox(height: 10),
 
@@ -68,16 +123,11 @@ class SplaceScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // Button
+            // Manual button (fallback)
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
-
-                  // MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SignInWithNumberScreen(),),
                 );
-
               },
               label: const Text(
                 "Let's get started",
@@ -88,10 +138,10 @@ class SplaceScreen extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.arrow_forward, color: Colors.black),
-
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

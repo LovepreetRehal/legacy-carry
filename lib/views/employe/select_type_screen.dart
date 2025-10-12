@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/complete_profile_screen.dart';
 
 import '../employe/employee_register_screen.dart';
 import '../resident/post_a_job_one.dart';
@@ -107,8 +108,8 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const PostAJobOne(),
-                          ),
+                            builder: (context) => const CompleteProfileScreen(),
+                          )
                         );
                       }
                       else {

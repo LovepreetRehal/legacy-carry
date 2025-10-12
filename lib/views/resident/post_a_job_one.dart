@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/resident/post_a_job_two.dart';
+import 'package:legacy_carry/views/viewmodels/post_job_viewmodel.dart';
+import 'package:provider/provider.dart';
 
-class PostAJobOne extends StatefulWidget {
+import '../models/create_job_request.dart';
+
+
+class PostAJobOne extends StatelessWidget {
   const PostAJobOne({super.key});
 
   @override
-  State<PostAJobOne> createState() => _PostJobScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => PostJobViewmodel(),
+      child: const _PostAJobOneScreenContent(),
+    );
+  }
 }
 
-class _PostJobScreenState extends State<PostAJobOne> {
+class _PostAJobOneScreenContent extends StatefulWidget {
+  const _PostAJobOneScreenContent();
+
+  @override
+  State<_PostAJobOneScreenContent> createState() => _PostAJobOneContentState();
+}
+
+class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
+
   final TextEditingController jobTitleController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
@@ -182,8 +201,45 @@ class _PostJobScreenState extends State<PostAJobOne> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    onPressed: () {
-                      // TODO: Handle Next step
+                    onPressed: () async {
+
+                      if (jobTitleController.text.isEmpty ||
+                          addressController.text.isEmpty ||
+                          workersRequired == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Please fill all required fields")),
+                        );
+                        return;
+                      }
+
+
+                      final updatedJobData = CreateJobRequest(
+                        jobTitle: jobTitleController.text.trim(),
+                        location: locationController.text.trim().isEmpty
+                            ? "Unknown Location"
+                            : locationController.text.trim(),
+                        address: addressController.text.trim(),
+                        jobType: jobType.toLowerCase().replaceAll(' ', '_'), // full_day, part_time, hourly
+                        workersRequired: int.parse(workersRequired!),
+                        skillsRequired: [], // will add in Step 2
+                        toolsProvided: false,
+                        documentsRequired: [],
+                        safetyInstructions: "",
+                        startDate: "",
+                        endDate: "",
+                        shift: "",
+                        payType: "",
+                        payAmount: 0,
+                        advancePayment: false,
+                        advanceAmount: 0,
+                      );
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostJobStep2Screen(jobData: updatedJobData),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Next',

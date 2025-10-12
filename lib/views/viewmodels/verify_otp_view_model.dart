@@ -14,9 +14,7 @@ class VerifyOtpViewModel extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   Map<String, dynamic>? get otpResponse => _otpResponse;
 
-
-
-  // ✅ Verify OTP (New)
+  // ✅ Verify OTP
   Future<void> verifyUserOtp({
     required String phone,
     required String otp,
@@ -30,11 +28,19 @@ class VerifyOtpViewModel extends ChangeNotifier {
         otp: otp,
       );
 
-      _otpResponse = response;
-      _status = OtpStatus.success;
-      print("verifyUserOtp success -> ${response.toString()}");
+      if (response['status'] == true) {
+        // OTP Verified successfully
+        _otpResponse = response;
+        _status = OtpStatus.success;
+        print("verifyUserOtp success -> $response");
+      } else {
+        // OTP failed (e.g., Invalid OTP)
+        _errorMessage = response['message'] ?? "Invalid OTP";
+        _status = OtpStatus.error;
+        print("verifyUserOtp failed -> $_errorMessage");
+      }
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = "Something went wrong";
       _status = OtpStatus.error;
       print("verifyUserOtp error -> $e");
     }

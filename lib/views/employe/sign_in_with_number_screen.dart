@@ -217,9 +217,14 @@ class _EmployeeRegisterContentState extends State<_SignInWithNumberScreen> {
 
                   // ✅ Sign in with email (Text button)
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+                      );
+                    },
                     child: const Text(
-                      "Sign in with Email",
+                      "Sign Up",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,

@@ -1,19 +1,28 @@
-// screens/edit_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/get_profile_view_model.dart';
 import '../services/auth_service.dart';
 
-class EditProfileScreen extends StatefulWidget {
-  final String token; // pass the user auth token
-
-  const EditProfileScreen({super.key, required this.token});
+class EditProfileScreen extends StatelessWidget {
+  const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => GetProfileViewModel()..fetchProfile(),
+      child: const _EditProfileContent(),
+    );
+  }
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileContent extends StatefulWidget {
+  const _EditProfileContent({super.key});
+
+  @override
+  State<_EditProfileContent> createState() => _EditProfileContentState();
+}
+
+class _EditProfileContentState extends State<_EditProfileContent> {
   late TextEditingController nameController;
   late TextEditingController emailController;
   late TextEditingController phoneController;
@@ -25,10 +34,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     emailController = TextEditingController();
     phoneController = TextEditingController();
 
-    // Fetch profile on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<GetProfileViewModel>(context, listen: false)
-          .fetchProfile(widget.token);
+      final profileVM = Provider.of<GetProfileViewModel>(context, listen: false);
+      profileVM.addListener(() {
+        if (profileVM.status == ProfileStatus.success && profileVM.profileData != null) {
+          final data = profileVM.profileData!;
+          nameController.text = data['name'] ?? '';
+          emailController.text = data['email'] ?? '';
+          phoneController.text = data['phone'] ?? '';
+        }
+      });
+      profileVM.fetchProfile();
     });
   }
 
@@ -38,6 +54,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     emailController.dispose();
     phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    final updatedData = {
+      "name": nameController.text.trim(),
+      "email": emailController.text.trim(),
+      "phone": phoneController.text.trim(),
+    };
+
+    try {
+      // final res = await AuthService().updateProfile(updatedData);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
   }
 
   @override
@@ -76,156 +111,126 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               return const Center(child: CircularProgressIndicator());
             } else if (profileVM.status == ProfileStatus.error) {
               return Center(child: Text(profileVM.errorMessage));
-            } else if (profileVM.status == ProfileStatus.success &&
-                profileVM.profileData != null) {
-              final data = profileVM.profileData!;
-              nameController.text = data['name'] ?? '';
-              emailController.text = data['email'] ?? '';
-              phoneController.text = data['phone'] ?? '';
+            }
 
-              return Center(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE7C55E),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE7C55E),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Profile photo placeholder
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Profile Photo
-                        Container(
-                          width: 70,
-                          height: 70,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'PHOTO',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
-                          alignment: Alignment.center,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Name
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          hintText: "Enter Your Name",
+                          labelText: "Full Name",
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Email
+                      TextField(
+                        controller: emailController,
+                        decoration: InputDecoration(
+                          hintText: "Enter Your Email",
+                          labelText: "Email",
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Phone
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          hintText: "Enter Your Phone No.",
+                          labelText: "Phone Number",
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Save Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2F8D46),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: _saveProfile,
                           child: const Text(
-                            'PHOTO',
+                            "Save Changes",
                             style: TextStyle(
-                              color: Colors.black54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Name
-                        TextField(
-                          controller: nameController,
-                          decoration: InputDecoration(
-                            hintText: "Enter Your Name",
-                            labelText: "Full Name",
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Email
-                        TextField(
-                          controller: emailController,
-                          decoration: InputDecoration(
-                            hintText: "Enter Your Email",
-                            labelText: "Email",
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Phone
-                        TextField(
-                          controller: phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            hintText: "Enter Your Phone No.",
-                            labelText: "Phone Number",
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Save Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2F8D46),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                            onPressed: () async {
-                              // Call your update API here
-                              final updatedData = {
-                                "name": nameController.text,
-                                "email": emailController.text,
-                                "phone": phoneController.text,
-                              };
-                              try {
-                                final res = await AuthService()
-                                    .createResidentUser(updatedData); // replace with your update profile API
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text("Profile updated successfully")),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
-                                );
-                              }
-                            },
-                            child: const Text(
-                              "Save Changes",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
+                      )
+                    ],
                   ),
                 ),
-              );
-            } else {
-              return const SizedBox();
-            }
+              ),
+            );
           },
         ),
       ),

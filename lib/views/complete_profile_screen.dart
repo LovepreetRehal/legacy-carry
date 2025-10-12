@@ -1,22 +1,44 @@
+// Add this import at the top
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/employe/dashboard_screen.dart';
+import 'package:legacy_carry/views/employe/sign_in_with_number_screen.dart';
+import 'package:provider/provider.dart';
 import 'employe/select_type_screen.dart';
+import 'viewmodels/country_view_model.dart';
 
-class CompleteProfileScreen extends StatefulWidget {
+class CompleteProfileScreen extends StatelessWidget {
   const CompleteProfileScreen({super.key});
 
   @override
-  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CountryViewModel()..fetchCountries()..fetchSocieties(),
+      child: const _CompleteProfileScreen(),
+    );
+  }
 }
 
-class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
+class _CompleteProfileScreen extends StatefulWidget {
+  const _CompleteProfileScreen({super.key});
+
+  @override
+  State<_CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+}
+
+class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final villageController = TextEditingController();
 
   String? selectedResidentialStatus;
   String? selectedPaymentMethod;
-  String? selectedState = "Punjab";
+  String? selectedCountry;
+  String? selectedState;
+  String? selectedCity;
+  String? selectedSociety;
   String? selectedDistrict = "Patiala";
+  int? selectedCountryId;
+  int? selectedStateId;
 
   final residentialOptions = ["Society", "Individual", "Commercial"];
   final paymentOptions = ["Bank Transfer", "Cash", "UPI"];
@@ -29,44 +51,56 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     super.dispose();
   }
 
-  void handleSaveAndContinue() {
-    final name = fullNameController.text.trim();
-    final email = emailController.text.trim();
-    final village = villageController.text.trim();
-
-    // Print or use the collected values
-    debugPrint('===============================');
-    debugPrint('Full Name: $name');
-    debugPrint('Email: $email');
-    debugPrint('Residential Status: $selectedResidentialStatus');
-    debugPrint('State: $selectedState');
-    debugPrint('District: $selectedDistrict');
-    debugPrint('Village/Town: $village');
-    debugPrint('Payment Method: $selectedPaymentMethod');
-    debugPrint('===============================');
-
-    // You can also create a Map to send to API easily 👇
+  void handleSaveAndContinue() async {
     final profileData = {
-      "full_name": name,
-      "email": email,
+      "full_name": fullNameController.text.trim(),
+      "email": emailController.text.trim(),
       "residential_status": selectedResidentialStatus,
+      "country": selectedCountry,
       "state": selectedState,
+      "city": selectedCity,
+      "society": selectedSociety,
       "district": selectedDistrict,
-      "village": village,
+      "village": villageController.text.trim(),
       "payment_method": selectedPaymentMethod,
     };
 
-    debugPrint("Profile Data Map: $profileData");
+    debugPrint("=====================================");
+    debugPrint("Profile Data Map:");
+    debugPrint(profileData.toString());
+    debugPrint("=====================================");
 
-    // 👉 Navigate to next screen after saving data
+    final viewModel = Provider.of<CountryViewModel>(context, listen: false);
+
+    // Only create society if user selected "Society" residential type
+    if (selectedResidentialStatus == "Society" && selectedSociety != null) {
+      // You can customize these values or add extra fields
+      final success = await viewModel.createSociety(
+        name: selectedSociety!,
+        address: villageController.text.trim(),
+        city: selectedCity ?? "",
+        state: selectedState ?? "",
+        pincode: "123456", // you can make this dynamic if needed
+      );
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to create society")),
+        );
+        return;
+      }
+    }
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+      MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = Provider.of<CountryViewModel>(context);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -75,10 +109,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF5C041), // top yellowish
-              Color(0xFF3CA349), // bottom green
-            ],
+            colors: [Color(0xFFF5C041), Color(0xFF3CA349)],
           ),
         ),
         child: SafeArea(
@@ -95,10 +126,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 const Center(
                   child: Text(
                     "Complete Your Profile",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -149,55 +177,127 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           child: Text(e),
                         ))
                             .toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedResidentialStatus = val;
-                          });
-                        },
+                        onChanged: (val) => setState(() {
+                          selectedResidentialStatus = val;
+                        }),
+                        isExpanded: true,
                         decoration: const InputDecoration(
-                          labelText: "Select your Residential Status",
+                          labelText: "Residential Status",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
                       const SizedBox(height: 12),
 
-                      DropdownButtonFormField<String>(
-                        value: selectedState,
-                        items: const [
-                          DropdownMenuItem(
-                            value: "Punjab",
-                            child: Text("Punjab"),
-                          ),
-                        ],
+                      // Country Dropdown
+                      viewModel.isLoadingCountries && viewModel.countries.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<String>(
+                        value: selectedCountry,
+                        isExpanded: true,
+                        hint: const Text("Select Country"),
+                        items: viewModel.countries.map((country) {
+                          return DropdownMenuItem<String>(
+                            value: country['name'],
+                            child: Text(country['name']),
+                          );
+                        }).toList(),
                         onChanged: (val) {
+                          final country = viewModel.countries
+                              .firstWhere((c) => c['name'] == val);
+                          setState(() {
+                            selectedCountry = val;
+                            selectedCountryId = country['id'];
+                            selectedState = null;
+                            selectedCity = null;
+                          });
+                          viewModel.fetchStates(selectedCountryId!);
+                        },
+                        decoration: const InputDecoration(
+                          labelText: "Country",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // State Dropdown
+                      viewModel.isLoadingStates && viewModel.states.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<String>(
+                        value: selectedState,
+                        isExpanded: true,
+                        hint: const Text("Select State"),
+                        items: viewModel.states.map((state) {
+                          return DropdownMenuItem<String>(
+                            value: state['name'],
+                            child: Text(state['name']),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          final state = viewModel.states
+                              .firstWhere((s) => s['name'] == val);
                           setState(() {
                             selectedState = val;
+                            selectedStateId = state['id'];
+                            selectedCity = null;
                           });
+                          viewModel.fetchCities(selectedStateId!);
                         },
                         decoration: const InputDecoration(
-                          labelText: "Select State",
+                          labelText: "State",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
                       const SizedBox(height: 12),
 
-                      DropdownButtonFormField<String>(
-                        value: selectedDistrict,
-                        items: const [
-                          DropdownMenuItem(
-                            value: "Patiala",
-                            child: Text("Patiala"),
-                          ),
-                        ],
+                      // City Dropdown
+                      viewModel.isLoadingCities && viewModel.cities.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<String>(
+                        value: selectedCity,
+                        isExpanded: true,
+                        hint: const Text("Select City"),
+                        items: viewModel.cities.map((city) {
+                          return DropdownMenuItem<String>(
+                            value: city['name'],
+                            child: Text(city['name']),
+                          );
+                        }).toList(),
                         onChanged: (val) {
                           setState(() {
-                            selectedDistrict = val;
+                            selectedCity = val;
                           });
                         },
                         decoration: const InputDecoration(
-                          labelText: "Select Distt/City",
+                          labelText: "City",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Societies Dropdown
+                      viewModel.isLoadingSocieties && viewModel.societies.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<String>(
+                        value: selectedSociety,
+                        isExpanded: true,
+                        hint: const Text("Select Society"),
+                        items: viewModel.societies.map((society) {
+                          return DropdownMenuItem<String>(
+                            value: society['name'],
+                            child: Text(society['name']),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            selectedSociety = val;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: "Society",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -217,6 +317,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
                       DropdownButtonFormField<String>(
                         value: selectedPaymentMethod,
+                        isExpanded: true,
                         items: paymentOptions
                             .map((e) => DropdownMenuItem(
                           value: e,
@@ -229,7 +330,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           });
                         },
                         decoration: const InputDecoration(
-                          labelText: "Preferred Payment Method",
+                          labelText: "Payment Method",
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),

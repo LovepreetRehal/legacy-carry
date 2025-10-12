@@ -302,14 +302,16 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                           );
 
 
-                          // ✅ Pass this object to VerificationScreen
-                          Navigator.pushReplacement(
+
+
+
+
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => VerificationScreen(
-                                userData: userData,
-                              ),
+                              builder: (context) => VerificationScreen(userData: userData),
                             ),
+
                           );
                         },
                         style: ElevatedButton.styleFrom(

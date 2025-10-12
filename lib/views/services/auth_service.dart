@@ -1,11 +1,20 @@
 // services/auth_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/create_job_model.dart';
+import '../models/create_job_request.dart';
 import '../models/login_request.dart';
 import '../models/login_response.dart';
+import '../models/sign_up_request.dart';
 
 class AuthService {
   final String baseUrl = 'https://legacycarry.com/api';
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  }
 
   /// Login API
   Future<LoginResponse> login(LoginRequest request) async {
@@ -28,6 +37,61 @@ class AuthService {
       }
     } else {
       throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+
+  /// SIGNUP API
+  Future<LoginResponse> signUp(SignUpRequest request) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/users'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    print("SignUp response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['status'] == true) {
+        return LoginResponse.fromJson(json);
+      } else {
+        throw Exception(json['message'] ?? 'SignUp failed');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+  Future<CreateJobResponse> createJob(CreateJobRequest jobData) async {
+    final url = Uri.parse('$baseUrl/jobs/create'); // ✅ trailing slash
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          // 'Authorization': 'Bearer $token', // if your API needs it
+        },
+        body: jsonEncode(jobData.toJson()), // ✅ ensure proper serialization
+      );
+
+      print("📡 URl: ${url}");
+      print("📡 body: ${jobData.toJson()}");
+      print("📡 Status Code: ${response.statusCode}");
+      print("📥 Response Body: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = jsonDecode(response.body);
+        return CreateJobResponse.fromJson(jsonData);
+      } else {
+        throw Exception("Failed to create job. Status: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("❌ Error while creating job: $e");
+      throw Exception("Error creating job: $e");
     }
   }
 
@@ -117,35 +181,62 @@ class AuthService {
       throw Exception('Server error: ${response.statusCode}');
     }
   }
+  Future<List<dynamic>> getCountries() async {
+    try {
+      final url = Uri.parse("$baseUrl/countries"); // 👈 replace with your actual base URL
+      final response = await http.get(url);
 
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-  Future<List<Map<String, dynamic>>> getCountries() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/countries'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    );
+        // If API returns something like { "data": [ ... ] }
+        if (data['data'] != null && data['data'] is List) {
+          return data['data'];
+        }
 
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
-      // assuming API returns something like { "status": true, "data": [ { code: "+91", name: "India" }, ... ] }
-      if (jsonData['status'] == true && jsonData['data'] != null) {
-        List<dynamic> list = jsonData['data'];
-        // convert each to Map<String, dynamic>
-        return list.map((e) => e as Map<String, dynamic>).toList();
+        // If API returns a raw list [ ... ]
+        if (data is List) {
+          return data;
+        }
+
+        // If structure is unexpected
+        return [];
       } else {
-        throw Exception(jsonData['message'] ?? 'Failed to fetch countries');
+        print("❌ Failed: ${response.statusCode}");
+        return [];
       }
-    } else {
-      throw Exception('Server error: ${response.statusCode}');
+    } catch (e) {
+      print("❌ Exception in getCountries(): $e");
+      return []; // ✅ Always return a List
     }
   }
 
+  Future<List<dynamic>> getStates(int countryId) async {
+    try {
+      final url = Uri.parse("$baseUrl/countries/$countryId/states");
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['data'] != null && data['data'] is List) {
+          return data['data'];
+        } else if (data is List) {
+          return data;
+        }
+      }
+      return [];
+    } catch (e) {
+      print("❌ Error fetching states: $e");
+      return [];
+    }
+  }
 
   // services/auth_service.dart
 
-  Future<Map<String, dynamic>> getUserProfile({required String token}) async {
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final token = await getToken(); // get token from SharedPreferences
+    if (token == null) throw Exception('User not logged in');
+
     final response = await http.get(
       Uri.parse('$baseUrl/profile'), // assuming endpoint is /profile
       headers: {
@@ -162,6 +253,38 @@ class AuthService {
         return json; // you can also return json['data'] if you only need the profile data
       } else {
         throw Exception(json['message'] ?? 'Failed to fetch profile');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  /// ✅ Get Dashboard Data (returns List)
+  Future<List<dynamic>> getDashboardData() async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/jobs'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print("getDashboardData response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is List) {
+        // ✅ API returns a list directly
+        return jsonData;
+      } else if (jsonData is Map && jsonData['data'] is List) {
+        // ✅ Some APIs wrap list in "data"
+        return jsonData['data'];
+      } else {
+        throw Exception('Unexpected response format');
       }
     } else {
       throw Exception('Server error: ${response.statusCode}');
