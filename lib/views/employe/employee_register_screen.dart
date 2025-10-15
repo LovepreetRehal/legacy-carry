@@ -24,15 +24,15 @@ class _EmployeeRegisterContent extends StatefulWidget {
 }
 
 class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-  TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // 6 OTP fields
   final List<TextEditingController> _otpControllers =
   List.generate(6, (_) => TextEditingController());
 
@@ -54,236 +54,282 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 🔙 Top Bar
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "Join As an Employee",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Padding(
-                  padding: EdgeInsets.only(left: 48),
-                  child: Text(
-                    "Fill in your profile to receive job offers",
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 🧭 Stepper Tabs
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
+            child: Form(
+              key: _formKey, // ✅ add Form key
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔙 Top Bar
+                  Row(
                     children: [
-                      _buildStep("Personal Info", true),
-                      _buildStep("Professional", false),
-                      _buildStep("Verification", false),
-                      _buildStep("Agreement", false),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Join As an Employee",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                // 📝 Form Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        "Name*",
-                        Icons.person_outline,
-                        controller: _nameController,
-                        hint: "John Doe",
-                      ),
-                      const SizedBox(height: 12),
+                  // 📝 Form Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTextFormField(
+                          "Name*",
+                          Icons.person_outline,
+                          controller: _nameController,
+                          hint: "John Doe",
+                          validator: (value) =>
+                          value!.isEmpty ? "Please enter your name" : null,
+                        ),
+                        const SizedBox(height: 12),
 
-                      _buildTextField(
-                        "Email Address*",
-                        Icons.email_outlined,
-                        controller: _emailController,
-                        hint: "info@gmail.com",
-                      ),
-                      const SizedBox(height: 12),
+                        _buildTextFormField(
+                          "Email Address*",
+                          Icons.email_outlined,
+                          controller: _emailController,
+                          hint: "info@gmail.com",
+                          validator: (value) {
+                            if (value!.isEmpty) return "Please enter email";
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$')
+                                .hasMatch(value)) {
+                              return "Enter a valid email";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
 
-                      // 📞 Phone with Verify
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              "Phone Number*",
-                              Icons.phone_outlined,
-                              controller: _phoneController,
-                              hint: "+91-9876543210",
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              minimumSize: const Size(70, 48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        // 📞 Phone with Verify
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextFormField(
+                                "Phone Number*",
+                                Icons.phone_outlined,
+                                controller: _phoneController,
+                                hint: "+91-9876543210",
+                                validator: (value) {
+                                  if (value!.isEmpty)
+                                    return "Enter phone number";
+                                  if (value.length < 10)
+                                    return "Enter valid phone number";
+                                  return null;
+                                },
                               ),
                             ),
-                            onPressed: otpVm.status == OtpStatus.loading
-                                ? null
-                                : () async {
-                              await otpVm.sendUserOtp(
-                                countryCode: "+91",
-                                phone: _phoneController.text.trim(),
-                                purpose: "login",
-                              );
-
-                              if (otpVm.status == OtpStatus.success) {
-
-
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(const SnackBar(
-                                  content: Text("OTP Sent Successfully"),
-                                ));
-                              } else if (otpVm.status ==
-                                  OtpStatus.error) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(SnackBar(
-                                  content: Text(
-                                      "Error: ${otpVm.errorMessage}"),
-                                ));
-                              }
-                            },
-                            child: otpVm.status == OtpStatus.loading
-                                ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                                : const Text("VERIFY"),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 🔢 OTP fields
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(
-                          6,
-                              (index) => SizedBox(
-                            width: 45,
-                            child: TextField(
-                              controller: _otpControllers[index],
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              maxLength: 1,
-                              decoration: InputDecoration(
-                                counterText: "",
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                minimumSize: const Size(70, 48),
+                                shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
+                              onPressed: otpVm.status == OtpStatus.loading
+                                  ? null
+                                  : () async {
+                                if (_phoneController.text.isEmpty ||
+                                    _phoneController.text.length < 10) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Enter valid phone number first"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                await otpVm.sendUserOtp(
+                                  countryCode: "+91",
+                                  phone:
+                                  _phoneController.text.trim(),
+                                  purpose: "login",
+                                );
+
+                                if (otpVm.status ==
+                                    OtpStatus.success) {
+                                  final response = otpVm.otpResponse;
+                                  final message = response?['message'] ?? 'OTP sent successfully';
+                                  final code = response?['code']; // for testing if needed
+
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content: Text(otpVm.errorMessage.isNotEmpty
+                                          ? message+ "  "+code.toString()
+                                          : message + "  "+code.toString()),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else if (otpVm.status ==
+                                    OtpStatus.error) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content:
+                                      Text(otpVm.errorMessage),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              child: otpVm.status == OtpStatus.loading
+                                  ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                                  : const Text("VERIFY"),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 🔢 OTP fields
+                        Row(
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                          children: List.generate(
+                            6,
+                                (index) => SizedBox(
+                              width: 45,
+                              child: TextFormField(
+                                controller: _otpControllers[index],
+                                textAlign: TextAlign.center,
+                                keyboardType: TextInputType.number,
+                                maxLength: 1,
+                                decoration: InputDecoration(
+                                  counterText: "",
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                validator: (value) =>
+                                value!.isEmpty ? "" : null,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                      _buildTextField(
-                        "Current Address*",
-                        Icons.location_on,
-                        controller: _addressController,
-                        hint: "India",
-                      ),
-                      const SizedBox(height: 12),
-
-                      _buildTextField(
-                        "Password*",
-                        Icons.lock_outline,
-                        controller: _passwordController,
-                        hint: "Set Password",
-                        obscure: true,
-                      ),
-                      const SizedBox(height: 12),
-
-                      _buildTextField(
-                        "Confirm Password*",
-                        Icons.lock_outline,
-                        controller: _confirmPasswordController,
-                        hint: "Confirm Password",
-                        obscure: true,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // 🚀 Next button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text("NEXT"),
-                    onPressed: () {
-                      final otpCode = _otpControllers
-                          .map((controller) => controller.text)
-                          .join();
-
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProfessionalDetailsScreen(
-                            name: _nameController.text.trim(),
-                            email: _emailController.text.trim(),
-                            phone: _phoneController.text.trim(),
-                            address: _addressController.text.trim(),
-                            password: _passwordController.text.trim(),
-                            otp: otpCode,
-                          ),
+                        _buildTextFormField(
+                          "Current Address*",
+                          Icons.location_on,
+                          controller: _addressController,
+                          hint: "India",
+                          validator: (value) => value!.isEmpty
+                              ? "Please enter address"
+                              : null,
                         ),
-                      );
+                        const SizedBox(height: 12),
 
+                        _buildTextFormField(
+                          "Password*",
+                          Icons.lock_outline,
+                          controller: _passwordController,
+                          hint: "Set Password",
+                          obscure: true,
+                          validator: (value) {
+                            if (value!.isEmpty) return "Enter password";
+                            if (value.length < 6)
+                              return "Minimum 6 characters required";
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
 
-
-                    },
+                        _buildTextFormField(
+                          "Confirm Password*",
+                          Icons.lock_outline,
+                          controller: _confirmPasswordController,
+                          hint: "Confirm Password",
+                          obscure: true,
+                          validator: (value) {
+                            if (value!.isEmpty)
+                              return "Confirm your password";
+                            if (value != _passwordController.text)
+                              return "Passwords do not match";
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+
+                  // 🚀 Next button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: const Text("NEXT"),
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          final otpCode = _otpControllers
+                              .map((controller) => controller.text)
+                              .join();
+
+                          if (otpCode.length < 6) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Enter full 6-digit OTP"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfessionalDetailsScreen(
+                                name: _nameController.text.trim(),
+                                email: _emailController.text.trim(),
+                                phone: _phoneController.text.trim(),
+                                address: _addressController.text.trim(),
+                                password: _passwordController.text.trim(),
+                                otp: otpCode,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -291,34 +337,13 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
     );
   }
 
-  Widget _buildStep(String title, bool isActive) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.green : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 9,
-              color: isActive ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(
+  Widget _buildTextFormField(
       String title,
       IconData icon, {
         String? hint,
         bool obscure = false,
         TextEditingController? controller,
+        String? Function(String?)? validator,
       }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,9 +357,10 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
           ),
         ),
         const SizedBox(height: 6),
-        TextField(
+        TextFormField(
           controller: controller,
           obscureText: obscure,
+          validator: validator,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon),

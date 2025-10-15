@@ -5,7 +5,7 @@ import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 
 class EmployeeHomeScreen extends StatelessWidget {
   const EmployeeHomeScreen({super.key});
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(

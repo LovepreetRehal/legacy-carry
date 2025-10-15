@@ -191,7 +191,8 @@ class _EmployeeRegisterContentState extends State<_SignInWithNumberScreen> {
                               ),
                             );
                           });
-                        } else if (loginVM.status == OtpStatus.error) {
+                        }
+                        else if (loginVM.status == OtpStatus.error) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(loginVM.errorMessage),

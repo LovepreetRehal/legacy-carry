@@ -132,32 +132,54 @@ class AuthService {
     required String phone,
     required String otp,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login-otp'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "phone": phone,
-        "otp": otp,
-      }),
-    );
-    print("verifyUserOtp response -> $phone  ,  otp   -> $otp");
+    final url = Uri.parse('$baseUrl/login-otp');
 
-    print("verifyUserOtp response -> ${response.body}");
+    print("📤 Sending verifyUserOtp request to $url");
+    print("Body: ${jsonEncode({'phone': phone, 'otp': otp})}");
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['status'] == true) {
-        return json;
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "phone": phone,
+          "otp": otp,
+        }),
+      );
+
+      print("📩 Response (${response.statusCode}): ${response.body}");
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        if (json['status'] == true) {
+          print("✅ OTP verification successful!");
+          return json;
+        } else {
+          print("⚠️ OTP verification failed: ${json['message']}");
+          return {
+            "status": false,
+            "message": json['message'] ?? 'OTP verification failed',
+          };
+        }
       } else {
-        throw Exception(json['message'] ?? 'OTP verification failed');
+        print("❌ Server returned ${response.statusCode}");
+        return {
+          "status": false,
+          "message": "Server error: ${response.statusCode}",
+        };
       }
-    } else {
-      throw Exception('Server error: ${response.statusCode}');
+    } catch (e) {
+      print("❌ Exception during OTP verification: $e");
+      return {
+        "status": false,
+        "message": "Something went wrong: $e",
+      };
     }
   }
-
 
   Future<Map<String, dynamic>> createResidentUser(Map<String, dynamic> data) async {
     final response = await http.post(

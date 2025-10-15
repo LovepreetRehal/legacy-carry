@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/get_profile_view_model.dart';
 import '../services/auth_service.dart';
@@ -26,6 +28,10 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   late TextEditingController nameController;
   late TextEditingController emailController;
   late TextEditingController phoneController;
+  bool _dataSet = false;
+  XFile? _image; // ✅ Store the selected photo
+
+  final ImagePicker _picker = ImagePicker(); // ✅ Initialize ImagePicker
 
   @override
   void initState() {
@@ -35,17 +41,17 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     phoneController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final profileVM = Provider.of<GetProfileViewModel>(context, listen: false);
-      profileVM.addListener(() {
-        if (profileVM.status == ProfileStatus.success && profileVM.profileData != null) {
-          final data = profileVM.profileData!;
-          nameController.text = data['name'] ?? '';
-          emailController.text = data['email'] ?? '';
-          phoneController.text = data['phone'] ?? '';
-        }
-      });
-      profileVM.fetchProfile();
+      Provider.of<GetProfileViewModel>(context, listen: false).fetchProfile();
     });
+  }
+
+  Future<void> _pickImage() async {
+    final pickedImage = await _picker.pickImage(source: ImageSource.camera);
+    if (pickedImage != null) {
+      setState(() {
+        _image = pickedImage;
+      });
+    }
   }
 
   @override
@@ -64,7 +70,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     };
 
     try {
-      // final res = await AuthService().updateProfile(updatedData);
+      // Optional: You can upload the image here with your API.
+      // final res = await AuthService().updateProfile(updatedData, _image);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully")),
       );
@@ -111,6 +118,18 @@ class _EditProfileContentState extends State<_EditProfileContent> {
               return const Center(child: CircularProgressIndicator());
             } else if (profileVM.status == ProfileStatus.error) {
               return Center(child: Text(profileVM.errorMessage));
+            } else if (profileVM.status == ProfileStatus.success &&
+                profileVM.profileData != null &&
+                !_dataSet) {
+              final user = profileVM.profileData!['user'];
+              if (user != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  nameController.text = user['name'] ?? '';
+                  emailController.text = user['email'] ?? '';
+                  phoneController.text = user['phone'] ?? '';
+                  _dataSet = true;
+                });
+              }
             }
 
             return Center(
@@ -132,27 +151,46 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   child: Column(
                     children: [
-                      // Profile photo placeholder
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'PHOTO',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      // ✅ Profile photo section
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.white,
+                              backgroundImage: _image != null
+                                  ? FileImage(File(_image!.path))
+                                  : null,
+                              child: _image == null
+                                  ? const Text(
+                                'PHOTO',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )
+                                  : null,
+                            ),
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
 
-                      // Name
                       TextField(
                         controller: nameController,
                         decoration: InputDecoration(
@@ -169,7 +207,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Email
                       TextField(
                         controller: emailController,
                         decoration: InputDecoration(
@@ -186,7 +223,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Phone
                       TextField(
                         controller: phoneController,
                         keyboardType: TextInputType.phone,
@@ -204,7 +240,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Save Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(

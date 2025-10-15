@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/splace_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -276,9 +278,16 @@ void _showLogoutDialog(BuildContext context) {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close the dialog
-                      // Add logout logic here
+                    onPressed: () async {
+                      // Close the dialog first
+                      Navigator.of(context).pop();
+
+                      // Clear all SharedPreferences data
+                      SharedPreferences prefs = await SharedPreferences.getInstance();
+                      await prefs.clear();
+
+                      // Navigate to WelcomeScreen and remove all previous routes
+                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const SplaceScreen()), (Route<dynamic> route) => false,);
                     },
                     child: const Text(
                       'Yes , Logout',
