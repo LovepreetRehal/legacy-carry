@@ -30,7 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  firebase_core: ^3.5.0  # (use latest version)
   google_fonts: ^6.2.1
   provider: ^6.1.1  # ✅ or latest stable version
   shared_preferences: ^2.1.1

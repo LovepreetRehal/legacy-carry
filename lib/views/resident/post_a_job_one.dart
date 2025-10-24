@@ -232,6 +232,7 @@ class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
                         payAmount: 0,
                         advancePayment: false,
                         advanceAmount: 0,
+                        user_id: 0,
                       );
 
                       Navigator.push(

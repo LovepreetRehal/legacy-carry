@@ -24,10 +24,26 @@ class PostJobViewmodel extends ChangeNotifier {
 
     try {
       final response = await _authService.createJob(request);
-      _createJobResponse = response;
-      _status = PostJobStatus.success;
+
+      if (response != null) {
+        _createJobResponse = response;
+        _status = PostJobStatus.success;
+        if (kDebugMode) {
+          print("✅ Job created successfully: ${response.toString()}");
+        }
+      } else {
+        // If backend returns null or invalid format
+        _errorMessage = "No valid response from server.";
+        _status = PostJobStatus.error;
+      }
     } catch (e, stackTrace) {
-      _errorMessage = e.toString();
+      // Clean up the error message for UI
+      _errorMessage = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('Error creating job: ', '')
+          .trim();
+
       _status = PostJobStatus.error;
 
       if (kDebugMode) {

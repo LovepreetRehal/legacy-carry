@@ -207,7 +207,7 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                       minimumSize: const Size(150, 45),
                     ),
                     onPressed: () async {
-                      // Build final request
+                      // ✅ Step 1: Build the request
                       final request = CreateJobRequest(
                         jobTitle: widget.jobData.jobTitle,
                         location: widget.jobData.location,
@@ -221,32 +221,51 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                         startDate: startDateController.text.trim(),
                         endDate: endDateController.text.trim(),
                         shift: "morning",
-                        // shift: selectedShift,
                         payType: "per_day",
-                        // payType: selectedPayType,
                         payAmount: int.tryParse(payAmountController.text.trim()) ?? 0,
                         advancePayment: advancePayment,
                         advanceAmount: int.tryParse(advanceAmountController.text.trim()) ?? 0,
+                        user_id: 14, // ⚠️ will show “invalid user id” if 0
                       );
 
                       final jobViewModel = Provider.of<PostJobViewmodel>(context, listen: false);
+
+                      // ✅ Step 2: Create job
                       await jobViewModel.createJob(request);
 
+                      // ✅ Step 3: Handle result
                       if (jobViewModel.status == PostJobStatus.success) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Job created successfully!")),
+                          const SnackBar(
+                            content: Text("✅ Job created successfully!"),
+                            backgroundColor: Colors.green,
+                          ),
                         );
                         Navigator.pop(context);
                       } else {
+                        String message = jobViewModel.errorMessage;
+
+                        // ✅ Clean up the exception message to show nicely
+                        if (message.contains('Exception:')) {
+                          message = message.replaceAll('Exception:', '').trim();
+                        }
+                        if (message.contains('Error creating job:')) {
+                          message = message.replaceAll('Error creating job:', '').trim();
+                        }
+
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Job creation failed: ${jobViewModel.errorMessage}")),
+                          SnackBar(
+                            content: Text("❌ Job creation failed: $message"),
+                            backgroundColor: Colors.redAccent,
+                            duration: const Duration(seconds: 3),
+                          ),
                         );
                       }
                     },
                     child: const Text("Review Job"),
                   ),
                 ),
-              ],
+               ],
             ),
           ),
         ),

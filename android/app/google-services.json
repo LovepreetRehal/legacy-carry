@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "217124623975",
+    "project_id": "legacycarry",
+    "storage_bucket": "legacycarry.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:217124623975:android:140a3fbd4da60a9a3126c2",
+        "android_client_info": {
+          "package_name": "com.example.legacy_carry"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2WNmfCYVWCmCsN5YYEZGt7QfQrHldTlQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

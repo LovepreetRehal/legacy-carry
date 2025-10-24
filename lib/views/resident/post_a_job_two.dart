@@ -195,6 +195,7 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                         payAmount: widget.jobData.payAmount,
                         advancePayment: widget.jobData.advancePayment,
                         advanceAmount: widget.jobData.advanceAmount,
+                        user_id: widget.jobData.user_id
                       );
 
                       // ✅ Go to Step 3

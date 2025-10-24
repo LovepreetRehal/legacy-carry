@@ -65,7 +65,7 @@ class AuthService {
     }
   }
   Future<CreateJobResponse> createJob(CreateJobRequest jobData) async {
-    final url = Uri.parse('$baseUrl/jobs/create'); // ✅ trailing slash
+    final url = Uri.parse('$baseUrl/jobs/create'); // ✅ ensure correct endpoint
 
     try {
       final response = await http.post(
@@ -73,24 +73,31 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          // 'Authorization': 'Bearer $token', // if your API needs it
+          // 'Authorization': 'Bearer $token', // uncomment if needed
         },
-        body: jsonEncode(jobData.toJson()), // ✅ ensure proper serialization
+        body: jsonEncode(jobData.toJson()),
       );
 
-      print("📡 URl: ${url}");
-      print("📡 body: ${jobData.toJson()}");
+      print("📡 URL: $url");
+      print("📤 Body: ${jobData.toJson()}");
       print("📡 Status Code: ${response.statusCode}");
       print("📥 Response Body: ${response.body}");
 
+      // Decode JSON safely
+      final jsonData = jsonDecode(response.body);
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonData = jsonDecode(response.body);
+        // ✅ Success response
         return CreateJobResponse.fromJson(jsonData);
       } else {
-        throw Exception("Failed to create job. Status: ${response.statusCode}");
+        // ❌ API returned error JSON
+        final errorMessage = jsonData['message'] ??
+            'Failed to create job. Unknown server error.';
+        throw Exception(errorMessage);
       }
-    } catch (e) {
-      print("❌ Error while creating job: $e");
+    } catch (e, stack) {
+      print("❌ Exception while creating job: $e");
+      print(stack);
       throw Exception("Error creating job: $e");
     }
   }

@@ -15,6 +15,7 @@ class CreateJobRequest {
   final int payAmount;
   final bool advancePayment;
   final int advanceAmount;
+  final int user_id;
 
   CreateJobRequest({
     required this.jobTitle,
@@ -33,6 +34,7 @@ class CreateJobRequest {
     required this.payAmount,
     required this.advancePayment,
     required this.advanceAmount,
+    required this.user_id,
   });
 
   Map<String, dynamic> toJson() {
@@ -53,6 +55,7 @@ class CreateJobRequest {
       "pay_amount": payAmount,
       "advance_payment": advancePayment,
       "advance_amount": advanceAmount,
+      "user_id": user_id,
     };
   }
 }
