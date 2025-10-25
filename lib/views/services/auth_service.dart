@@ -53,7 +53,7 @@ class AuthService {
 
     print("SignUp response -> ${response.body}");
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200|| response.statusCode == 201) {
       final json = jsonDecode(response.body);
       if (json['status'] == true) {
         return LoginResponse.fromJson(json);
@@ -289,12 +289,23 @@ class AuthService {
   }
 
   /// ✅ Get Dashboard Data (returns List)
-  Future<List<dynamic>> getDashboardData() async {
+  Future<List<dynamic>> getDashboardData({String? status}) async {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
+
+    // Parse base URL
+    final uri = Uri.parse('$baseUrl/jobs');
+
+    // Build URL with query parameters
+    final finalUri = status != null && status.isNotEmpty
+        ? uri.replace(queryParameters: {'status': status})
+        : uri;
+
+
     final response = await http.get(
-      Uri.parse('$baseUrl/jobs'),
+      // Uri.parse('$baseUrl/jobs'),
+      finalUri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

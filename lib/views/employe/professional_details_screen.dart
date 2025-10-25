@@ -271,6 +271,16 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          if (aboutController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter something about yourself.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return; // stop navigation
+                          }
+
                           print("=== Personal Details ===");
                           print("Name: ${widget.name}");
                           print("Email: ${widget.email}");
@@ -300,9 +310,6 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                             availability: availability,
                             about: aboutController.text,
                           );
-
-
-
 
 
 

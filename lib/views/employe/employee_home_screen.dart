@@ -3,107 +3,227 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/get_job_viewmodel.dart';
+
 class EmployeeHomeScreen extends StatelessWidget {
   const EmployeeHomeScreen({super.key});
- 
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Bar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Hello Ramesh 👋",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+    return ChangeNotifierProvider(
+      create: (_) => GetJobViewmodel()..fetchDashboardData(),
+      child: Consumer<GetJobViewmodel>(
+        builder: (context, vm, _) {
+          return Scaffold(
+            body: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: SafeArea(
+                child: vm.status == GetJobStatus.loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : vm.status == GetJobStatus.error
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Error: ${vm.errorMessage}",
+                        style: const TextStyle(color: Colors.red),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none,
-                          color: Colors.black),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Top Cards Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildInfoCard("Active Jobs", "26"),
-                    _buildInfoCard("Applicants", "09"),
-                    _buildInfoCard("Upcoming Shifts", "01"),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.post_add,
-                      label: "Post Job",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PostAJobOne(),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: vm.fetchDashboardData,
+                        child: const Text("Retry"),
+                      ),
+                    ],
+                  ),
+                )
+                    : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top Bar
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Hello Ramesh 👋",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    _buildActionButton(
-                        icon: Icons.search, label: "Find Labor", onTap: () {}),
-                    _buildActionButton(
-                        icon: Icons.message, label: "Messages", onTap: () {}),
-                    _buildActionButton(
-                        icon: Icons.payment, label: "Payments", onTap: () {}),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                          IconButton(
+                            icon: const Icon(Icons.notifications_none,
+                                color: Colors.black),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                // Recent Applicants
-                const Text(
-                  "Recent Applicants:",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                      // Top Cards Row
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildInfoCard(
+                              "Active Jobs",
+                              vm.jobData.length
+                                  .toString()), // Dynamic count
+                          _buildInfoCard("Applicants", "09"),
+                          _buildInfoCard("Upcoming Shifts", "01"),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Action Buttons
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildActionButton(
+                            icon: Icons.post_add,
+                            label: "Post Job",
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const PostAJobOne(),
+                                ),
+                              );
+                            },
+                          ),
+                          _buildActionButton(
+                              icon: Icons.search,
+                              label: "Find Labor",
+                              onTap: () {}),
+                          _buildActionButton(
+                              icon: Icons.message,
+                              label: "Messages",
+                              onTap: () {}),
+                          _buildActionButton(
+                              icon: Icons.payment,
+                              label: "Payments",
+                              onTap: () {}),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Recent Applicants
+                      const Text(
+                        "Recent Applicants:",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      // const SizedBox(height: 12),
+                      // _buildApplicantCard(
+                      //     "Vikas", "Electrician", Icons.electric_bolt),
+                      // _buildApplicantCard(
+                      //     "Rahul", "Plumber", Icons.plumbing),
+                      // _buildApplicantCard(
+                      //     "Sunita", "Cook", Icons.restaurant),
+                      // const SizedBox(height: 24),
+                      //
+                      // // ✅ Job List
+                      // const Text(
+                      //   "Available Jobs:",
+                      //   style: TextStyle(
+                      //       fontSize: 16,
+                      //       fontWeight: FontWeight.bold,
+                      //       color: Colors.black),
+                      // ),
+                      const SizedBox(height: 12),
+                      ListView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: vm.jobData.length,
+                        itemBuilder: (context, index) {
+                          final job = vm.jobData[index] as Map<String, dynamic>;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 3,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.work, color: Colors.blueAccent, size: 28),
+                                    const SizedBox(width: 10),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          job['job_title'] ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          " ${job['pay_type'] ?? ''} | ₹${job['pay_amount'] ?? ''}",
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    // Navigate to job details screen
+                                  },
+                                  child: const Text("View"),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                _buildApplicantCard("Vikas", "Electrician", Icons.electric_bolt),
-                _buildApplicantCard("Rahul", "Plumber", Icons.plumbing),
-                _buildApplicantCard("Sunita", "Cook", Icons.restaurant),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  // Info Card Widget
   Widget _buildInfoCard(String title, String count) {
     return Expanded(
       child: Container(
@@ -113,35 +233,29 @@ class EmployeeHomeScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+            BoxShadow(
+                color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
         child: Column(
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
-              ),
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54)),
             const SizedBox(height: 4),
-            Text(
-              count,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
+            Text(count,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green)),
           ],
         ),
       ),
     );
   }
 
-  // Action Button Widget
   Widget _buildActionButton({
     required IconData icon,
     required String label,
@@ -157,7 +271,7 @@ class EmployeeHomeScreen extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
               ],
             ),
             padding: const EdgeInsets.all(10),
@@ -165,15 +279,11 @@ class EmployeeHomeScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.black87),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87)),
       ],
     );
   }
 
-  // Applicant Card Widget
   Widget _buildApplicantCard(String name, String jobTitle, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -195,20 +305,11 @@ class EmployeeHomeScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    jobTitle,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
-                  ),
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(jobTitle,
+                      style: const TextStyle(color: Colors.black54, fontSize: 14)),
                 ],
               ),
             ],
@@ -228,7 +329,6 @@ class EmployeeHomeScreen extends StatelessWidget {
     );
   }
 }
-
 
 
 

@@ -63,12 +63,13 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
       "district": selectedDistrict,
       "village": villageController.text.trim(),
       "payment_method": selectedPaymentMethod,
+      "user_id": selectedPaymentMethod,
     };
 
-    debugPrint("=====================================");
-    debugPrint("Profile Data Map:");
-    debugPrint(profileData.toString());
-    debugPrint("=====================================");
+    print("=====================================");
+    print("Profile Data Map:");
+    print(profileData.toString());
+    print("=====================================");
 
     final viewModel = Provider.of<CountryViewModel>(context, listen: false);
 
@@ -91,10 +92,10 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
       }
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
-    );
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
+    // );
   }
 
   @override

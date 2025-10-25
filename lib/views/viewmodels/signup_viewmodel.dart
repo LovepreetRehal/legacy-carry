@@ -26,8 +26,10 @@ class SignUpViewModel extends ChangeNotifier {
     try {
       final response = await _authService.signUp(request);
       _signUpResponse = response;
+      print("signUp repose   + "+ response.message);
       _status = SignUpStatus.success;
     } catch (e) {
+      print("signUp Error   + "+ e.toString());
       _errorMessage = e.toString();
       _status = SignUpStatus.error;
     }

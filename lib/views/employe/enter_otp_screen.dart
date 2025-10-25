@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -198,6 +200,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
                               if (token != null && role != null) {
                                 final prefs = await SharedPreferences.getInstance();
+
+                                // ✅ Save user data as JSON
+                                await prefs.setString('user_data', jsonEncode(user));
+                                await prefs.setInt('user_id', user['id']); // ✅ save user id
+
                                 await prefs.setString('auth_token', token);
                                 await prefs.setString('user_role', role);
                                 debugPrint("✅ Token saved: $token");
@@ -231,6 +238,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                 );
                               }
                             } else if (otpVM.status == OtpStatus.error) {
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(

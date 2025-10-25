@@ -113,7 +113,7 @@ class CountryViewModel extends ChangeNotifier {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint("✅ Society created successfully: ${response.body}");
+        print("✅ Society created successfully: ${response.body}");
         // Optionally, refresh societies list
         fetchSocieties();
         return true;

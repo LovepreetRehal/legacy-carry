@@ -244,7 +244,23 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                   ),
                                   onPressed: () async {
                                     final otp = otpControllers.map((c) => c.text).join();
-                                    final idNumber = idController.text;
+                                    final idNumber = idController.text.trim(); // Trim spaces
+
+                                    // ✅ Validation for ID Number
+                                    if (idNumber.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Please enter your ID number")),
+                                      );
+                                      return; // Stop execution
+                                    }
+
+                                    // (Optional) Additional check if you expect a specific length or format
+                                    if (idNumber.length < 6) { // example condition
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("ID number must be at least 6 characters long")),
+                                      );
+                                      return;
+                                    }
 
                                     // Print userData
                                     print("=== User Data ===");
@@ -258,7 +274,7 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                     print("About: ${widget.userData.about}");
                                     print("Availability: ${widget.userData.availability}");
                                     print("ID Number: $idNumber");
-                                    print("OTP: $otp");
+                                    print("OTP: ${widget.userData.otp}");
 
                                     final signUpViewModel =
                                     Provider.of<SignUpViewModel>(context, listen: false);
@@ -270,7 +286,7 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                       email: widget.userData.email,
                                       password: widget.userData.password,
                                       role: "labor",
-                                      otp: otp,
+                                      otp: widget.userData.otp,
                                       experienceYears: widget.userData.experience ?? "0",
                                       services: ["Plumbing"], // Replace as needed
                                       workRadiusKm: widget.userData.workRadius?.toInt() ?? 0,
@@ -289,7 +305,9 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                       );
                                     } else if (signUpViewModel.status == SignUpStatus.error) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text("Signup failed: ${signUpViewModel.errorMessage}")),
+                                        SnackBar(
+                                            content: Text(
+                                                "Signup failed: ${signUpViewModel.errorMessage}")),
                                       );
                                     }
                                   },

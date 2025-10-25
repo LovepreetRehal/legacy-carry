@@ -67,10 +67,10 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
               const SizedBox(height: 15),
 
               buildOption(
-                title: "EMPLOYER",
+                title: "RESIDENT",
                 subtitle: "",
                 icon: Icons.group_outlined,
-                value: "employer",
+                value: "customer",
               ),
               const SizedBox(height: 15),
 
@@ -103,7 +103,7 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
                             builder: (context) => const EmployeeRegisterScreen(),
                           ),
                         );
-                      } else if (selectedRole == "employer") {
+                      } else if (selectedRole == "customer") {
                         // ✅ Go to Employee registration
                         Navigator.push(
                           context,

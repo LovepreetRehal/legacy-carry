@@ -6,6 +6,7 @@ import 'package:legacy_carry/views/dashboard/search_screen.dart';
 import '../dashboard/edit_profie.dart';
 import '../dashboard/messages_screen.dart';
 import '../dashboard/settings_screen.dart';
+import '../resident/resident_home_screen.dart';
 import 'employee_home_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -20,7 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _pages = [
     const EmployeeHomeScreen(),    // Dashboard / Home
-    const SearchJobsScreen(),
+    const ResidentHomeScreen(),
     const MyJobsScreen(),
     const MessagesScreen(),
     const SettingsScreen(),

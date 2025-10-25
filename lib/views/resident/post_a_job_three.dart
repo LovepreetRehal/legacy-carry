@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/create_job_request.dart';
 import '../viewmodels/post_job_viewmodel.dart';
 
@@ -207,6 +208,10 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                       minimumSize: const Size(150, 45),
                     ),
                     onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      final userId = prefs.getInt('user_id'); // getInt returns int? (nullable)
+
+
                       // ✅ Step 1: Build the request
                       final request = CreateJobRequest(
                         jobTitle: widget.jobData.jobTitle,
@@ -216,7 +221,8 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                         workersRequired: widget.jobData.workersRequired,
                         skillsRequired: widget.jobData.skillsRequired,
                         toolsProvided: widget.jobData.toolsProvided,
-                        documentsRequired: widget.jobData.documentsRequired,
+                        documentsRequired: ["ID"],
+                        // documentsRequired: widget.jobData.documentsRequired,
                         safetyInstructions: widget.jobData.safetyInstructions,
                         startDate: startDateController.text.trim(),
                         endDate: endDateController.text.trim(),
@@ -225,7 +231,7 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                         payAmount: int.tryParse(payAmountController.text.trim()) ?? 0,
                         advancePayment: advancePayment,
                         advanceAmount: int.tryParse(advanceAmountController.text.trim()) ?? 0,
-                        user_id: 14, // ⚠️ will show “invalid user id” if 0
+                        user_id: userId!, // ⚠️ will show “invalid user id” if 0
                       );
 
                       final jobViewModel = Provider.of<PostJobViewmodel>(context, listen: false);
@@ -272,4 +278,8 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
       ),
     );
   }
+
+
 }
+
+
