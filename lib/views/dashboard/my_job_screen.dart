@@ -1,40 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/my_jobs_viewmodel.dart';
+import '../resident/view_job_screen.dart';
+import '../resident/edit_job_screen.dart';
 
-void main() {
-  runApp(const JobApp());
-}
-
-class JobApp extends StatelessWidget {
-  const JobApp({super.key});
+class MyJobsScreen extends StatelessWidget {
+  const MyJobsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: MyJobsScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => MyJobsViewModel()..fetchAllJobs(),
+      child: const _MyJobsContent(),
     );
   }
 }
 
-class MyJobsScreen extends StatefulWidget {
-  const MyJobsScreen({super.key});
+class _MyJobsContent extends StatefulWidget {
+  const _MyJobsContent();
 
   @override
-  State<MyJobsScreen> createState() => _MyJobsScreenState();
+  State<_MyJobsContent> createState() => _MyJobsContentState();
 }
 
-class _MyJobsScreenState extends State<MyJobsScreen>
+class _MyJobsContentState extends State<_MyJobsContent>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+        length: 3, vsync: this); // active, upcoming, and completed tabs
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = Provider.of<MyJobsViewModel>(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -57,10 +66,10 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    GestureDetector(
+                    /* GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Icon(Icons.arrow_back, color: Colors.black),
-                    ),
+                    ),*/
                     const SizedBox(width: 12),
                     const Text(
                       "My Jobs",
@@ -68,6 +77,11 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.black),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.black),
+                      onPressed: () => viewModel.fetchAllJobs(),
                     ),
                   ],
                 ),
@@ -89,10 +103,7 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.black,
                   tabs: const [
-                    Tab( child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text("Active"),
-                        )),
+                    Tab(text: "Active"),
                     Tab(text: "Upcoming"),
                     Tab(text: "Completed"),
                   ],
@@ -102,16 +113,36 @@ class _MyJobsScreenState extends State<MyJobsScreen>
 
               // Tab Views
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildJobList("Active"),
-                    _buildJobList("Upcoming"),
-                    _buildJobList("Completed"),
-                  ],
-                ),
+                child: viewModel.status == MyJobsStatus.loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : viewModel.status == MyJobsStatus.error
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Error: ${viewModel.errorMessage}',
+                                  style: const TextStyle(color: Colors.red),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () => viewModel.fetchAllJobs(),
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _buildJobList(viewModel.activeJobs, "active"),
+                              _buildJobList(viewModel.upcomingJobs, "upcoming"),
+                              _buildJobList(
+                                  viewModel.completedJobs, "completed"),
+                            ],
+                          ),
               ),
-
             ],
           ),
         ),
@@ -119,39 +150,28 @@ class _MyJobsScreenState extends State<MyJobsScreen>
     );
   }
 
-  Widget _buildJobList(String type) {
-    List<Map<String, String>> jobs = [];
-
-    if (type == "Active") {
-      jobs = [
-        {
-          "title": "Carpentry at Green Meadows",
-          "company": "Rajiv Kumar",
-          "date": "18 Sep 2025",
-          "time": "09:00 AM",
-          "status": "Active"
-        },
-      ];
-    } else if (type == "Upcoming") {
-      jobs = [
-        {
-          "title": "Helper at Warehouse",
-          "company": "Akash Traders",
-          "date": "19 Sep 2025",
-          "time": "08:00 AM",
-          "status": "Upcoming"
-        },
-      ];
-    } else if (type == "Completed") {
-      jobs = [
-        {
-          "title": "Electrician Job",
-          "company": "Sunil Electricals",
-          "date": "15 Sep 2025",
-          "time": "10:00 AM",
-          "status": "Completed"
-        },
-      ];
+  Widget _buildJobList(List<dynamic> jobs, String type) {
+    if (jobs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.work_off,
+              size: 64,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No ${type} jobs found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
@@ -159,34 +179,43 @@ class _MyJobsScreenState extends State<MyJobsScreen>
       itemCount: jobs.length,
       itemBuilder: (context, index) {
         var job = jobs[index];
-        return _buildJobCard(
-          title: job["title"]!,
-          company: job["company"]!,
-          date: job["date"]!,
-          time: job["time"]!,
-          status: job["status"]!,
-        );
+        return _buildJobCard(job, type);
       },
     );
   }
 
-  Widget _buildJobCard({
-    required String title,
-    required String company,
-    required String date,
-    required String time,
-    required String status,
-  }) {
+  Widget _buildJobCard(Map<String, dynamic> job, String type) {
+    final jobTitle = job['job_title'] ?? 'No Title';
+    final location = job['location'] ?? 'Unknown Location';
+    final address = job['address'] ?? '';
+    final workersRequired = job['workers_required'] ?? 0;
+    final payAmount = job['pay_amount'] ?? '0';
+    final status = job['status'] ?? type;
+    final startDate = job['start_date'] ?? '';
+    final shift = job['shift'] ?? '';
+
+    // Format date
+    String formattedDate = '';
+    if (startDate.isNotEmpty) {
+      try {
+        final date = DateTime.parse(startDate);
+        formattedDate = '${date.day}/${date.month}/${date.year}';
+      } catch (e) {
+        formattedDate = startDate.split('T')[0]; 
+      }
+    }
+
     Color statusColor;
-    switch (status) {
-      case "Active":
+    switch (status.toLowerCase()) {
+      case "active":
         statusColor = Colors.green;
         break;
-      case "Upcoming":
+      case "draft":
+      case "upcoming":
         statusColor = Colors.orange;
         break;
-      case "Completed":
-        statusColor = Colors.black87;
+      case "completed":
+        statusColor = Colors.blue;
         break;
       default:
         statusColor = Colors.grey;
@@ -196,32 +225,37 @@ class _MyJobsScreenState extends State<MyJobsScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style:
-              const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.person, size: 16, color: Colors.green),
-              const SizedBox(width: 6),
-              Text(company),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  jobTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               Container(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  status,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  status.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -229,35 +263,112 @@ class _MyJobsScreenState extends State<MyJobsScreen>
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.calendar_today,
-                  size: 16, color: Colors.redAccent),
+              const Icon(Icons.location_on, size: 16, color: Colors.green),
               const SizedBox(width: 6),
-              Text(date),
+              Expanded(
+                child: Text(
+                  location,
+                  style: const TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.access_time, size: 16, color: Colors.blue),
+              const Icon(Icons.people, size: 16, color: Colors.blue),
               const SizedBox(width: 6),
-              Text(time),
+              Text('$workersRequired Workers Required'),
             ],
           ),
+          if (formattedDate.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Colors.redAccent),
+                const SizedBox(width: 6),
+                Text(formattedDate),
+                if (shift.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text(
+                      shift.toUpperCase(),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ],
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.currency_rupee, size: 16, color: Colors.green),
+              const SizedBox(width: 6),
+              Text(
+                '$payAmount',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          if (address.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              address,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: status == "Active"
-                    ? Colors.grey.shade300
-                    : Colors.white,
-                foregroundColor: Colors.black,
+                backgroundColor: status == "active"
+                    ? Colors.green
+                    : status == "completed"
+                        ? Colors.blue
+                        : Colors.orange,
+                foregroundColor: Colors.white,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               ),
-              onPressed: () {},
+              onPressed: () {
+                if (status == "active") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ViewJobScreen(jobData: job),
+                    ),
+                  );
+                } else if (type == "upcoming") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditJobScreen(jobData: job),
+                    ),
+                  );
+                }
+                // You can add similar logic for completed cases if needed
+              },
               child: Text(
-                status == "Active" ? "End Shift" : "View Details",
+                status == "active"
+                    ? "View Details"
+                    : status == "completed"
+                        ? "View Report"
+                        : "Edit Job",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),

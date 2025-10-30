@@ -44,10 +44,10 @@ class MessagesScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
+                    /*IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
+                    ),*/
                     const Text(
                       "Messages",
                       style: TextStyle(

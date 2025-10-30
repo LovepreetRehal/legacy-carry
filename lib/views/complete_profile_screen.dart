@@ -1,25 +1,35 @@
 // Add this import at the top
 import 'package:flutter/material.dart';
-import 'package:legacy_carry/views/employe/dashboard_screen.dart';
-import 'package:legacy_carry/views/employe/sign_in_with_number_screen.dart';
 import 'package:provider/provider.dart';
-import 'employe/select_type_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'viewmodels/country_view_model.dart';
+import 'services/auth_service.dart';
+import 'models/login_request.dart';
+import 'viewmodels/send_otp_viewmodel.dart';
+import 'viewmodels/resident_user_viewmodel.dart';
+import 'resident/resident_dashboard_screen.dart';
 
 class CompleteProfileScreen extends StatelessWidget {
   const CompleteProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CountryViewModel()..fetchCountries()..fetchSocieties(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => CountryViewModel()
+              ..fetchCountries()
+              ..fetchSocieties()),
+        ChangeNotifierProvider(create: (_) => SendOtpViewModel()),
+        ChangeNotifierProvider(create: (_) => ResidentUserViewModel()),
+      ],
       child: const _CompleteProfileScreen(),
     );
   }
 }
 
 class _CompleteProfileScreen extends StatefulWidget {
-  const _CompleteProfileScreen({super.key});
+  const _CompleteProfileScreen();
 
   @override
   State<_CompleteProfileScreen> createState() => _CompleteProfileScreenState();
@@ -28,7 +38,11 @@ class _CompleteProfileScreen extends StatefulWidget {
 class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
   final villageController = TextEditingController();
+  final List<TextEditingController> otpControllers =
+      List.generate(6, (_) => TextEditingController());
 
   String? selectedResidentialStatus;
   String? selectedPaymentMethod;
@@ -39,63 +53,380 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   String? selectedDistrict = "Patiala";
   int? selectedCountryId;
   int? selectedStateId;
+  int? selectedSocietyId;
 
   final residentialOptions = ["Society", "Individual", "Commercial"];
   final paymentOptions = ["Bank Transfer", "Cash", "UPI"];
+
+  final TextEditingController countrySearchController = TextEditingController();
+  final TextEditingController countryDisplayController =
+      TextEditingController();
 
   @override
   void dispose() {
     fullNameController.dispose();
     emailController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
     villageController.dispose();
+    countrySearchController.dispose();
+    countryDisplayController.dispose();
+    for (var controller in otpControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
+  // (Deprecated) dialog-based country selection was removed in favor of inline Autocomplete.
+
   void handleSaveAndContinue() async {
-    final profileData = {
-      "full_name": fullNameController.text.trim(),
-      "email": emailController.text.trim(),
-      "residential_status": selectedResidentialStatus,
-      "country": selectedCountry,
-      "state": selectedState,
-      "city": selectedCity,
-      "society": selectedSociety,
-      "district": selectedDistrict,
-      "village": villageController.text.trim(),
-      "payment_method": selectedPaymentMethod,
-      "user_id": selectedPaymentMethod,
-    };
-
-    print("=====================================");
-    print("Profile Data Map:");
-    print(profileData.toString());
-    print("=====================================");
-
-    final viewModel = Provider.of<CountryViewModel>(context, listen: false);
-
-    // Only create society if user selected "Society" residential type
-    if (selectedResidentialStatus == "Society" && selectedSociety != null) {
-      // You can customize these values or add extra fields
-      final success = await viewModel.createSociety(
-        name: selectedSociety!,
-        address: villageController.text.trim(),
-        city: selectedCity ?? "",
-        state: selectedState ?? "",
-        pincode: "123456", // you can make this dynamic if needed
+    // Validate full name
+    if (fullNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your full name"),
+          backgroundColor: Colors.red,
+        ),
       );
+      return;
+    }
 
-      if (!success) {
+    // Validate email
+    if (emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your email address"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate email format
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(emailController.text.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter a valid email address"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate phone number
+    if (phoneController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your phone number"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (phoneController.text.trim().length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text("Please enter a valid phone number (minimum 10 digits)"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate OTP
+    final otp = otpControllers.map((c) => c.text).join();
+    if (otp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter the 6-digit OTP"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter a complete 6-digit OTP"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate address
+    if (villageController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your address/village"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate country
+    if (selectedCountry == null || selectedCountry!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a country"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate state
+    if (selectedState == null || selectedState!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a state"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate city (required for Society)
+    if (selectedCity == null || selectedCity!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a city"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate society selection if residential status is Society
+    if (selectedResidentialStatus == "Society") {
+      if (selectedSociety == null || selectedSociety!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to create society")),
+          const SnackBar(
+            content: Text("Please select a society"),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
     }
 
-    // Navigator.pushReplacement(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => const SignInWithNumberScreen()),
-    // );
+    // Validate residential status
+    if (selectedResidentialStatus == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select residential status"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate payment method
+    if (selectedPaymentMethod == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a payment method"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final profileData = {
+      "name": fullNameController.text.trim(), // API expects name
+      "full_name": fullNameController.text.trim(), // API also expects full_name
+      "email": emailController.text.trim(),
+      "phone": phoneController.text.trim(),
+      "password": passwordController.text.trim().isEmpty
+          ? "password123" // Default password if not provided
+          : passwordController.text.trim(),
+      "otp": otp,
+      "role": "customer", // Resident/Employer role
+      "is_active": true,
+      "society_id": selectedSocietyId,
+      "address": villageController.text.trim(), // API expects address
+      // Optional fields with defaults
+      "residential_status": selectedResidentialStatus ?? "Individual",
+      "country": selectedCountry ?? "India",
+      "state": selectedState ?? "",
+      "city": selectedCity ?? "",
+      "district": selectedDistrict ?? "",
+      "payment_method": selectedPaymentMethod ?? "Cash",
+    };
+
+    debugPrint("=====================================");
+    debugPrint("Profile Data Map:");
+    debugPrint(profileData.toString());
+    debugPrint("=====================================");
+
+    final countryViewModel =
+        Provider.of<CountryViewModel>(context, listen: false);
+
+    // Only create society if user selected "Society" residential type
+    if (selectedResidentialStatus == "Society" && selectedSociety != null) {
+      // Validate dependent fields
+      if ((selectedCity == null || selectedCity!.isEmpty) ||
+          (selectedState == null || selectedState!.isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text("Please select State and City before choosing Society"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final success = await countryViewModel.createSociety(
+        name: selectedSociety!,
+        address: villageController.text.trim(),
+        city: selectedCity!,
+        state: selectedState!,
+        pincode: "123456", // you can make this dynamic if needed
+      );
+
+      if (!success) {
+        // Get error message from view model
+        final errorMessage =
+            countryViewModel.lastSocietyError ?? "Failed to create society";
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Create Resident User via API
+    final residentViewModel =
+        Provider.of<ResidentUserViewModel>(context, listen: false);
+
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Creating your account..."),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    await residentViewModel.createResidentUser(profileData);
+
+    if (residentViewModel.status == ResidentUserStatus.success) {
+      final response = residentViewModel.response;
+
+      debugPrint("🔍 Full API Response: $response");
+
+      // Try to extract token from different possible locations in the response
+      String? token;
+      if (response != null) {
+        // Try different possible token paths
+        token = response['token'] ??
+            response['data']?['token'] ??
+            response['data']?['user']?['token'] ??
+            response['user']?['token'] ??
+            response['auth_token'];
+      }
+
+      // Save token and role if found
+      if (token != null && token.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('user_role', 'customer');
+        debugPrint(
+            "✅ Token saved successfully: ${token.substring(0, token.length > 20 ? 20 : token.length)}...");
+
+        // Verify token was saved
+        final savedToken = await prefs.getString('auth_token');
+        if (savedToken == null || savedToken.isEmpty) {
+          debugPrint(
+              "❌ ERROR: Token was not properly saved to SharedPreferences!");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  "Account created but authentication failed. Please try logging in."),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+        debugPrint(
+            "✅ Token verification - saved token exists: ${savedToken.isNotEmpty}");
+      } else {
+        debugPrint(
+            "⚠️ Warning: No token found in response! Trying auto-login...");
+        debugPrint("Response keys: ${response?.keys.toList() ?? 'null'}");
+
+        try {
+          final auth = AuthService();
+          final loginResp = await auth.login(
+            LoginRequest(
+              email: emailController.text.trim(),
+              password: passwordController.text.trim(),
+            ),
+          );
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', loginResp.token);
+          await prefs.setString('user_role', 'customer');
+          debugPrint("✅ Auto-login succeeded. Token saved.");
+        } catch (e) {
+          debugPrint("❌ Auto-login failed: $e");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  "Account created but no auth token received. Please log in to continue."),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          // Don't navigate if token is missing
+          return;
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Account created successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate to Resident Dashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const ResidentDashboardScreen()),
+      );
+    } else if (residentViewModel.status == ResidentUserStatus.error) {
+      // Extract and display error message
+      String errorMessage = residentViewModel.errorMessage;
+
+      // Clean up the error message (remove "Exception: " prefix if present)
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage.isEmpty
+              ? "An error occurred during registration"
+              : errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -131,7 +462,6 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -170,13 +500,153 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                       ),
                       const SizedBox(height: 12),
 
+                      // Phone Number Field with Send OTP button
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: phoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                hintText: "Enter Phone Number",
+                                labelText: "Phone Number",
+                                prefixText: "+91 ",
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Builder(
+                            builder: (context) {
+                              final otpVm =
+                                  Provider.of<SendOtpViewModel>(context);
+                              return ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  minimumSize: const Size(70, 48),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: otpVm.status == OtpStatus.loading
+                                    ? null
+                                    : () async {
+                                        if (phoneController.text.isEmpty ||
+                                            phoneController.text.length < 10) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  "Enter valid phone number first"),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        await otpVm.sendUserOtp(
+                                          countryCode: "+91",
+                                          phone: phoneController.text.trim(),
+                                          purpose: "login",
+                                        );
+
+                                        if (otpVm.status == OtpStatus.success) {
+                                          final response = otpVm.otpResponse;
+                                          final message =
+                                              response?['message'] ??
+                                                  'OTP sent successfully';
+                                          final code = response?['code'];
+
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  "$message ${code != null ? '  $code' : ''}"),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } else if (otpVm.status ==
+                                            OtpStatus.error) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(otpVm.errorMessage),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                child: otpVm.status == OtpStatus.loading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text("Send OTP"),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // OTP Fields
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(
+                          6,
+                          (index) => SizedBox(
+                            width: 45,
+                            child: TextField(
+                              controller: otpControllers[index],
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              maxLength: 1,
+                              decoration: InputDecoration(
+                                counterText: "",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                isDense: true,
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty && index < 5) {
+                                  FocusScope.of(context).nextFocus();
+                                } else if (value.isEmpty && index > 0) {
+                                  FocusScope.of(context).previousFocus();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Password Field
+                      TextField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          hintText: "Enter Password",
+                          labelText: "Password",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
                       DropdownButtonFormField<String>(
                         value: selectedResidentialStatus,
                         items: residentialOptions
                             .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        ))
+                                  value: e,
+                                  child: Text(e),
+                                ))
                             .toList(),
                         onChanged: (val) => setState(() {
                           selectedResidentialStatus = val;
@@ -190,119 +660,181 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Country Dropdown
-                      viewModel.isLoadingCountries && viewModel.countries.isEmpty
+                      // Country Autocomplete (inline searchable, no dialog)
+                      viewModel.isLoadingCountries &&
+                              viewModel.countries.isEmpty
                           ? const Center(child: CircularProgressIndicator())
-                          : DropdownButtonFormField<String>(
-                        value: selectedCountry,
-                        isExpanded: true,
-                        hint: const Text("Select Country"),
-                        items: viewModel.countries.map((country) {
-                          return DropdownMenuItem<String>(
-                            value: country['name'],
-                            child: Text(country['name']),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          final country = viewModel.countries
-                              .firstWhere((c) => c['name'] == val);
-                          setState(() {
-                            selectedCountry = val;
-                            selectedCountryId = country['id'];
-                            selectedState = null;
-                            selectedCity = null;
-                          });
-                          viewModel.fetchStates(selectedCountryId!);
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "Country",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
+                          : Autocomplete<String>(
+                              optionsBuilder:
+                                  (TextEditingValue textEditingValue) {
+                                final query =
+                                    textEditingValue.text.toLowerCase();
+                                final List<String> names = viewModel.countries
+                                    .map<String>(
+                                        (c) => (c['name'] ?? '').toString())
+                                    .toList();
+                                if (query.isEmpty) return names;
+                                return names.where(
+                                    (n) => n.toLowerCase().contains(query));
+                              },
+                              onSelected: (String selection) {
+                                final country = viewModel.countries
+                                    .firstWhere((c) => c['name'] == selection);
+                                setState(() {
+                                  selectedCountry = selection;
+                                  selectedCountryId = country['id'];
+                                  selectedState = null;
+                                  selectedCity = null;
+                                });
+                                viewModel.fetchStates(selectedCountryId!);
+                              },
+                              fieldViewBuilder: (context, controller, focusNode,
+                                  onFieldSubmitted) {
+                                if (selectedCountry != null &&
+                                    controller.text.isEmpty) {
+                                  controller.text = selectedCountry!;
+                                }
+                                return TextFormField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  decoration: const InputDecoration(
+                                    labelText: "Country",
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    hintText: "Type to search country",
+                                  ),
+                                );
+                              },
+                            ),
                       const SizedBox(height: 12),
 
                       // State Dropdown
                       viewModel.isLoadingStates && viewModel.states.isEmpty
                           ? const Center(child: CircularProgressIndicator())
                           : DropdownButtonFormField<String>(
-                        value: selectedState,
-                        isExpanded: true,
-                        hint: const Text("Select State"),
-                        items: viewModel.states.map((state) {
-                          return DropdownMenuItem<String>(
-                            value: state['name'],
-                            child: Text(state['name']),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          final state = viewModel.states
-                              .firstWhere((s) => s['name'] == val);
-                          setState(() {
-                            selectedState = val;
-                            selectedStateId = state['id'];
-                            selectedCity = null;
-                          });
-                          viewModel.fetchCities(selectedStateId!);
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "State",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
+                              value: selectedState,
+                              isExpanded: true,
+                              hint: const Text("Select State"),
+                              items: viewModel.states.map((state) {
+                                return DropdownMenuItem<String>(
+                                  value: state['name'],
+                                  child: Text(state['name']),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                final state = viewModel.states
+                                    .firstWhere((s) => s['name'] == val);
+                                setState(() {
+                                  selectedState = val;
+                                  selectedStateId = state['id'];
+                                  selectedCity = null;
+                                });
+                                viewModel.fetchCities(selectedStateId!);
+                              },
+                              decoration: const InputDecoration(
+                                labelText: "State",
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                            ),
                       const SizedBox(height: 12),
 
-                      // City Dropdown
+                      // City Autocomplete (inline searchable)
                       viewModel.isLoadingCities && viewModel.cities.isEmpty
                           ? const Center(child: CircularProgressIndicator())
-                          : DropdownButtonFormField<String>(
-                        value: selectedCity,
-                        isExpanded: true,
-                        hint: const Text("Select City"),
-                        items: viewModel.cities.map((city) {
-                          return DropdownMenuItem<String>(
-                            value: city['name'],
-                            child: Text(city['name']),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedCity = val;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "City",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
+                          : Autocomplete<String>(
+                              optionsBuilder:
+                                  (TextEditingValue textEditingValue) {
+                                final query =
+                                    textEditingValue.text.toLowerCase();
+                                final List<String> names = viewModel.cities
+                                    .map<String>(
+                                        (c) => (c['name'] ?? '').toString())
+                                    .toList();
+                                if (query.isEmpty) return names;
+                                return names.where(
+                                    (n) => n.toLowerCase().contains(query));
+                              },
+                              onSelected: (String selection) {
+                                setState(() {
+                                  selectedCity = selection;
+                                });
+                              },
+                              fieldViewBuilder: (context, controller, focusNode,
+                                  onFieldSubmitted) {
+                                if (selectedCity != null &&
+                                    controller.text.isEmpty) {
+                                  controller.text = selectedCity!;
+                                }
+                                return TextFormField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  decoration: const InputDecoration(
+                                    labelText: "City",
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    hintText: "Type to search city",
+                                  ),
+                                );
+                              },
+                            ),
                       const SizedBox(height: 12),
 
-                      // Societies Dropdown
-                      viewModel.isLoadingSocieties && viewModel.societies.isEmpty
+                      // Society Autocomplete (inline searchable)
+                      viewModel.isLoadingSocieties &&
+                              viewModel.societies.isEmpty
                           ? const Center(child: CircularProgressIndicator())
-                          : DropdownButtonFormField<String>(
-                        value: selectedSociety,
-                        isExpanded: true,
-                        hint: const Text("Select Society"),
-                        items: viewModel.societies.map((society) {
-                          return DropdownMenuItem<String>(
-                            value: society['name'],
-                            child: Text(society['name']),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedSociety = val;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "Society",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
+                          : Autocomplete<String>(
+                              optionsBuilder:
+                                  (TextEditingValue textEditingValue) {
+                                final query =
+                                    textEditingValue.text.toLowerCase();
+                                // Get unique society names
+                                final uniqueSocieties = viewModel.societies
+                                    .fold<List<Map<String, dynamic>>>(
+                                  [],
+                                  (uniqueList, society) {
+                                    if (!uniqueList.any(
+                                        (s) => s['name'] == society['name'])) {
+                                      uniqueList.add(society);
+                                    }
+                                    return uniqueList;
+                                  },
+                                );
+                                final List<String> names = uniqueSocieties
+                                    .map<String>(
+                                        (s) => (s['name'] ?? '').toString())
+                                    .toList();
+                                if (query.isEmpty) return names;
+                                return names.where(
+                                    (n) => n.toLowerCase().contains(query));
+                              },
+                              onSelected: (String selection) {
+                                final society = viewModel.societies
+                                    .firstWhere((s) => s['name'] == selection);
+                                setState(() {
+                                  selectedSociety = selection;
+                                  selectedSocietyId = society['id'];
+                                });
+                              },
+                              fieldViewBuilder: (context, controller, focusNode,
+                                  onFieldSubmitted) {
+                                if (selectedSociety != null &&
+                                    controller.text.isEmpty) {
+                                  controller.text = selectedSociety!;
+                                }
+                                return TextFormField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  decoration: const InputDecoration(
+                                    labelText: "Society",
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    hintText: "Type to search society",
+                                  ),
+                                );
+                              },
+                            ),
                       const SizedBox(height: 12),
 
                       TextField(
@@ -321,9 +853,9 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                         isExpanded: true,
                         items: paymentOptions
                             .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        ))
+                                  value: e,
+                                  child: Text(e),
+                                ))
                             .toList(),
                         onChanged: (val) {
                           setState(() {

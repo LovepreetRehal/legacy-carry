@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/get_profile_view_model.dart';
-import '../services/auth_service.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
@@ -18,7 +17,7 @@ class EditProfileScreen extends StatelessWidget {
 }
 
 class _EditProfileContent extends StatefulWidget {
-  const _EditProfileContent({super.key});
+  const _EditProfileContent();
 
   @override
   State<_EditProfileContent> createState() => _EditProfileContentState();
@@ -63,15 +62,21 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   }
 
   Future<void> _saveProfile() async {
-    final updatedData = {
-      "name": nameController.text.trim(),
-      "email": emailController.text.trim(),
-      "phone": phoneController.text.trim(),
-    };
+    // TODO: Implement profile update API call
+    // final updatedData = {
+    //   "name": nameController.text.trim(),
+    //   "email": emailController.text.trim(),
+    //   "phone": phoneController.text.trim(),
+    // };
 
     try {
       // Optional: You can upload the image here with your API.
       // final res = await AuthService().updateProfile(updatedData, _image);
+
+      print("Name: ${nameController.text.trim()}");
+      print("Email: ${emailController.text.trim()}");
+      print("Phone: ${phoneController.text.trim()}");
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully")),
       );
@@ -88,10 +93,10 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        /*leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
-        ),
+        ),*/
         title: const Text(
           "Edit Profile",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
@@ -115,26 +120,74 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         child: Consumer<GetProfileViewModel>(
           builder: (context, profileVM, child) {
             if (profileVM.status == ProfileStatus.loading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading profile...',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              );
             } else if (profileVM.status == ProfileStatus.error) {
-              return Center(child: Text(profileVM.errorMessage));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 60, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text(
+                      'Failed to load profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      profileVM.errorMessage,
+                      style: TextStyle(color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Provider.of<GetProfileViewModel>(context, listen: false)
+                            .fetchProfile();
+                      },
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             } else if (profileVM.status == ProfileStatus.success &&
                 profileVM.profileData != null &&
                 !_dataSet) {
               final user = profileVM.profileData!['user'];
               if (user != null) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  nameController.text = user['name'] ?? '';
-                  emailController.text = user['email'] ?? '';
-                  phoneController.text = user['phone'] ?? '';
-                  _dataSet = true;
+                  setState(() {
+                    nameController.text = user['name']?.toString() ?? '';
+                    emailController.text = user['email']?.toString() ?? '';
+                    phoneController.text = user['phone']?.toString() ?? '';
+                    _dataSet = true;
+                  });
+                  print(" Profile data loaded into form: ${user['name']}");
                 });
+              } else {
+                print(" User data is null in profile response");
               }
             }
 
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -165,13 +218,13 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                                   : null,
                               child: _image == null
                                   ? const Text(
-                                'PHOTO',
-                                style: TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )
+                                      'PHOTO',
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    )
                                   : null,
                             ),
                             Container(
@@ -198,7 +251,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                           labelText: "Full Name",
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(6),
                             borderSide: BorderSide.none,
@@ -214,7 +268,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                           labelText: "Email",
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(6),
                             borderSide: BorderSide.none,
@@ -231,7 +286,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                           labelText: "Phone Number",
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(6),
                             borderSide: BorderSide.none,

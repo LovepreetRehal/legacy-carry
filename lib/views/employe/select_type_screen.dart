@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/complete_profile_screen.dart';
 
 import '../employe/employee_register_screen.dart';
-import '../resident/post_a_job_one.dart';
+import '../employe/sign_in_with_number_screen.dart';
 
 class SelectTypeScreen extends StatefulWidget {
   const SelectTypeScreen({super.key});
@@ -40,7 +40,17 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                    Navigator.pop(context);
+                    // Check if we can pop, otherwise navigate to sign in screen
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SignInWithNumberScreen(),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
@@ -60,17 +70,18 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
               // Options
               buildOption(
                 title: "EMPLOYEE",
-                subtitle: "Sign Up as a Worker like Plumber, Electrician, Carpenter etc.",
+                subtitle:
+                    "Sign Up as a Worker like Plumber, Electrician, Carpenter etc.",
                 icon: Icons.work_outline,
                 value: "employee",
               ),
               const SizedBox(height: 15),
 
               buildOption(
-                title: "RESIDENT",
+                title: "EMPLOYER",
                 subtitle: "",
                 icon: Icons.group_outlined,
-                value: "customer",
+                value: "employer",
               ),
               const SizedBox(height: 15),
 
@@ -85,7 +96,8 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
 
               // Proceed button
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -93,38 +105,38 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
                     onPressed: selectedRole == null
                         ? null
                         : () {
-                      print("Selected role: $selectedRole");
+                            print("Selected role: $selectedRole");
 
-                      if (selectedRole == "employee") {
-                        // ✅ Go to Employee registration
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const EmployeeRegisterScreen(),
-                          ),
-                        );
-                      } else if (selectedRole == "customer") {
-                        // ✅ Go to Employee registration
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CompleteProfileScreen(),
-                          )
-                        );
-                      }
-                      else {
-                        // 🚧 Show Coming Soon dialog or snackbar
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Security Guard registration coming soon!",
-                            ),
-                            backgroundColor: Colors.orange,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
+                            if (selectedRole == "employee") {
+                              // ✅ Go to Employee registration
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const EmployeeRegisterScreen(),
+                                ),
+                              );
+                            } else if (selectedRole == "employer") {
+                              // ✅ Go to Employee registration
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const CompleteProfileScreen(),
+                                  ));
+                            } else {
+                              // 🚧 Show Coming Soon dialog or snackbar
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Security Guard registration coming soon!",
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
                     label: const Text(
                       "PROCEED",
@@ -169,7 +181,9 @@ class _RegisterAsScreenState extends State<SelectTypeScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.3),
+          color: isSelected
+              ? Colors.white.withOpacity(0.9)
+              : Colors.white.withOpacity(0.3),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? Colors.green : Colors.white,

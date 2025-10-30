@@ -21,8 +21,6 @@ class ProfessionalDetailsScreen extends StatefulWidget {
     required this.otp,
   });
 
-
-
   @override
   State<ProfessionalDetailsScreen> createState() =>
       _ProfessionalDetailsScreenState();
@@ -62,7 +60,8 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
             children: [
               // AppBar Row
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   children: [
                     IconButton(
@@ -99,7 +98,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                 ),
                 child: Row(
                   children: [
-                    _buildStep("Personal Info",false ),
+                    _buildStep("Personal Info", false),
                     _buildStep("Professional", true),
                     _buildStep("Verification", false),
                     _buildStep("Agreement", false),
@@ -137,17 +136,13 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                           value: experience,
                           hint: const Text("Select Experience Level"),
                           decoration: _inputDecoration(),
-                          items: [
-                            "Fresher",
-                            "1-3 Years",
-                            "3-5 Years",
-                            "5+ Years"
-                          ]
-                              .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e),
-                          ))
-                              .toList(),
+                          items:
+                              ["Fresher", "1-3 Years", "3-5 Years", "5+ Years"]
+                                  .map((e) => DropdownMenuItem(
+                                        value: e,
+                                        child: Text(e),
+                                      ))
+                                  .toList(),
                           onChanged: (val) {
                             setState(() {
                               experience = val;
@@ -188,7 +183,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                         // Slider
                         const Text("Work Radius"),
                         Slider(
-                            value: workRadius,
+                          value: workRadius,
                           min: 1,
                           max: 50,
                           divisions: 49,
@@ -226,7 +221,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                           decoration: _inputDecoration(label: "Availability"),
                           items: ["Full - Time", "Part - Time"]
                               .map((e) =>
-                              DropdownMenuItem(value: e, child: Text(e)))
+                                  DropdownMenuItem(value: e, child: Text(e)))
                               .toList(),
                           onChanged: (val) {
                             setState(() {
@@ -271,16 +266,6 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          if (aboutController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter something about yourself.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return; // stop navigation
-                          }
-
                           print("=== Personal Details ===");
                           print("Name: ${widget.name}");
                           print("Email: ${widget.email}");
@@ -296,7 +281,6 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                           print("Availability: $availability");
                           print("About: ${aboutController.text}");
 
-
                           final userData = UserData(
                             name: widget.name,
                             email: widget.email,
@@ -311,14 +295,12 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                             about: aboutController.text,
                           );
 
-
-
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => VerificationScreen(userData: userData),
+                              builder: (context) =>
+                                  VerificationScreen(userData: userData),
                             ),
-
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -349,8 +331,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide.none,
       ),
-      contentPadding:
-      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 }
@@ -397,4 +378,3 @@ Widget _buildStep(String title, bool isActive) {
     ),
   );
 }
-

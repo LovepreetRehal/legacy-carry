@@ -22,7 +22,8 @@ class VerificationScreen extends StatelessWidget {
 class _VerifyScreenContent extends StatefulWidget {
   final UserData userData; // ✅ store the UserData as a field
 
-  const _VerifyScreenContent({required this.userData, Key? key}) : super(key: key);
+  const _VerifyScreenContent({required this.userData, Key? key})
+      : super(key: key);
 
   @override
   State<_VerifyScreenContent> createState() => _VerifyScreenContentState();
@@ -243,41 +244,32 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                     ),
                                   ),
                                   onPressed: () async {
-                                    final otp = otpControllers.map((c) => c.text).join();
-                                    final idNumber = idController.text.trim(); // Trim spaces
-
-                                    // ✅ Validation for ID Number
-                                    if (idNumber.isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Please enter your ID number")),
-                                      );
-                                      return; // Stop execution
-                                    }
-
-                                    // (Optional) Additional check if you expect a specific length or format
-                                    if (idNumber.length < 6) { // example condition
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("ID number must be at least 6 characters long")),
-                                      );
-                                      return;
-                                    }
+                                    final otp = otpControllers
+                                        .map((c) => c.text)
+                                        .join();
+                                    final idNumber = idController.text;
 
                                     // Print userData
                                     print("=== User Data ===");
                                     print("Name: ${widget.userData.name}");
                                     print("Phone: ${widget.userData.phone}");
                                     print("Email: ${widget.userData.email}");
-                                    print("Password: ${widget.userData.password}");
-                                    print("Experience: ${widget.userData.experience}");
-                                    print("Work Radius: ${widget.userData.workRadius}");
+                                    print(
+                                        "Password: ${widget.userData.password}");
+                                    print(
+                                        "Experience: ${widget.userData.experience}");
+                                    print(
+                                        "Work Radius: ${widget.userData.workRadius}");
                                     print("Rate: ${widget.userData.rate}");
                                     print("About: ${widget.userData.about}");
-                                    print("Availability: ${widget.userData.availability}");
+                                    print(
+                                        "Availability: ${widget.userData.availability}");
                                     print("ID Number: $idNumber");
-                                    print("OTP: ${widget.userData.otp}");
+                                    print("OTP: $otp");
 
                                     final signUpViewModel =
-                                    Provider.of<SignUpViewModel>(context, listen: false);
+                                        Provider.of<SignUpViewModel>(context,
+                                            listen: false);
 
                                     // Build request from actual userData
                                     final request = SignUpRequest(
@@ -286,25 +278,39 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                       email: widget.userData.email,
                                       password: widget.userData.password,
                                       role: "labor",
-                                      otp: widget.userData.otp,
-                                      experienceYears: widget.userData.experience ?? "0",
-                                      services: ["Plumbing"], // Replace as needed
-                                      workRadiusKm: widget.userData.workRadius?.toInt() ?? 0,
-                                      hourlyRate: int.tryParse(widget.userData.rate ?? "0") ?? 0,
-                                      availability: widget.userData.availability ?? "true",
+                                      otp: otp,
+                                      experienceYears:
+                                          widget.userData.experience ?? "0",
+                                      services: [
+                                        "Plumbing"
+                                      ], // Replace as needed
+                                      workRadiusKm:
+                                          widget.userData.workRadius?.toInt() ??
+                                              0,
+                                      hourlyRate: int.tryParse(
+                                              widget.userData.rate ?? "0") ??
+                                          0,
+                                      availability:
+                                          widget.userData.availability ??
+                                              "true",
                                       about: widget.userData.about ?? "",
                                       idNumber: idNumber,
                                     );
 
                                     await signUpViewModel.signUp(request);
 
-                                    if (signUpViewModel.status == SignUpStatus.success) {
+                                    if (signUpViewModel.status ==
+                                        SignUpStatus.success) {
                                       Navigator.pushReplacement(
                                         context,
-                                        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DashboardScreen()),
                                       );
-                                    } else if (signUpViewModel.status == SignUpStatus.error) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                    } else if (signUpViewModel.status ==
+                                        SignUpStatus.error) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
                                             content: Text(
                                                 "Signup failed: ${signUpViewModel.errorMessage}")),

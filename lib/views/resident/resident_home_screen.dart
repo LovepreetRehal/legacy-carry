@@ -1,13 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/resident/post_a_job_one.dart';
+import '../services/auth_service.dart';
 
-class ResidentHomeScreen extends StatelessWidget {
+class ResidentHomeScreen extends StatefulWidget {
   const ResidentHomeScreen({super.key});
+
+  @override
+  State<ResidentHomeScreen> createState() => _ResidentHomeScreenState();
+}
+
+class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
+  final AuthService _authService = AuthService();
+  String userName = 'User';
+  bool isLoading = true;
 
   final List<Map<String, String>> recentApplicants = const [
     {"name": "Vikas", "job": "Electrician", "emoji": "🔌"},
     {"name": "Rahul", "job": "Plumber", "emoji": "🚰"},
     {"name": "Sunita", "job": "Cook", "emoji": "🍳"},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profileData = await _authService.getUserProfile();
+      if (mounted) {
+        setState(() {
+          // Extract name from user object
+          userName = profileData['user']?['name']?.toString() ??
+              profileData['data']?['name']?.toString() ??
+              profileData['name']?.toString() ??
+              'User';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+      if (mounted) {
+        setState(() {
+          userName = 'User';
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +76,21 @@ class ResidentHomeScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Hello Ramesh 👋",
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    isLoading
+                        ? const Text(
+                            "Hello 👋",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : Text(
+                            "Hello $userName 👋",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                     const Icon(Icons.notifications_none),
                   ],
                 ),
@@ -62,10 +111,10 @@ class ResidentHomeScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildActionButton("Post Job", Icons.post_add),
-                    _buildActionButton("Find Labor", Icons.search),
-                    _buildActionButton("Messages", Icons.message),
-                    _buildActionButton("Payments", Icons.payment),
+                    _buildActionButton(context, "Post Job", Icons.post_add),
+                    _buildActionButton(context, "Find Labor", Icons.search),
+                    _buildActionButton(context, "Messages", Icons.message),
+                    _buildActionButton(context, "Payments", Icons.payment),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -153,12 +202,23 @@ class ResidentHomeScreen extends StatelessWidget {
   }
 
   // Action Button Widget
-  Widget _buildActionButton(String label, IconData icon) {
+  Widget _buildActionButton(BuildContext context, String label, IconData icon) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: ElevatedButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            if (label == "Post Job") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PostAJobOne(),
+                ),
+              );
+            } else {
+              // Placeholder: You can implement navigation for other buttons as desired
+            }
+          },
           icon: Icon(icon, size: 18, color: Colors.black87),
           label: Text(
             label,

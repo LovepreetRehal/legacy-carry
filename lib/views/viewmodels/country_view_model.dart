@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
 
 class CountryViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> countries = [];
@@ -24,7 +21,8 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse('https://legacycarry.com/api/countries'));
+      final response =
+          await http.get(Uri.parse('https://legacycarry.com/api/countries'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         // Extract the countries array
@@ -75,7 +73,6 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
   Future<void> fetchSocieties() async {
     isLoadingSocieties = true;
     notifyListeners();
@@ -91,6 +88,10 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? _lastSocietyError;
+
+  String? get lastSocietyError => _lastSocietyError;
+
   Future<bool> createSociety({
     required String name,
     required String address,
@@ -98,6 +99,7 @@ class CountryViewModel extends ChangeNotifier {
     required String state,
     required String pincode,
   }) async {
+    _lastSocietyError = null;
     final url = Uri.parse('$baseUrl/societies-create');
     try {
       final response = await http.post(
@@ -113,24 +115,29 @@ class CountryViewModel extends ChangeNotifier {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print("✅ Society created successfully: ${response.body}");
+        debugPrint("✅ Society created successfully: ${response.body}");
         // Optionally, refresh societies list
         fetchSocieties();
         return true;
       } else {
-        debugPrint("❌ Failed to create society: ${response.body}");
+        try {
+          final errorJson = json.decode(response.body);
+          _lastSocietyError =
+              errorJson['message'] ?? 'Failed to create society';
+          debugPrint("❌ Failed to create society: ${response.body}");
+        } catch (e) {
+          _lastSocietyError = 'Failed to create society';
+          debugPrint("❌ Failed to create society: ${response.body}");
+        }
         return false;
       }
     } catch (e) {
+      _lastSocietyError = 'Network error: ${e.toString()}';
       debugPrint("❌ Exception creating society: $e");
       return false;
     }
   }
-
 }
-
-
-
 
 // import 'package:flutter/material.dart';
 // import '../services/auth_service.dart';

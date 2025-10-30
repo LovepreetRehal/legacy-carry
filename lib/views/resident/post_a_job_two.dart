@@ -47,7 +47,6 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
           )
         ],
       ),
-
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -59,14 +58,13 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView( // ✅ Added scroll
+          child: SingleChildScrollView(
+            // ✅ Added scroll
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 const SizedBox(height: 20),
-
                 const Text(
                   "Skills Required",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -86,7 +84,6 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                     );
                   }),
                 ),
-
                 const SizedBox(height: 20),
                 const Text(
                   "Tools Provided?",
@@ -101,8 +98,10 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                           setState(() => toolsProvided = true);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: toolsProvided ? Colors.green : Colors.white,
-                          foregroundColor: toolsProvided ? Colors.white : Colors.black,
+                          backgroundColor:
+                              toolsProvided ? Colors.green : Colors.white,
+                          foregroundColor:
+                              toolsProvided ? Colors.white : Colors.black,
                         ),
                         child: const Text("YES"),
                       ),
@@ -114,15 +113,16 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                           setState(() => toolsProvided = false);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !toolsProvided ? Colors.green : Colors.white,
-                          foregroundColor: !toolsProvided ? Colors.white : Colors.black,
+                          backgroundColor:
+                              !toolsProvided ? Colors.green : Colors.white,
+                          foregroundColor:
+                              !toolsProvided ? Colors.white : Colors.black,
                         ),
                         child: const Text("NO"),
                       ),
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
                 const Text(
                   "Documents Required",
@@ -132,18 +132,19 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                   children: [
                     Checkbox(
                       value: idRequired,
-                      onChanged: (value) => setState(() => idRequired = value ?? false),
+                      onChanged: (value) =>
+                          setState(() => idRequired = value ?? false),
                     ),
                     const Text("ID"),
                     const SizedBox(width: 20),
                     Checkbox(
                       value: certificateRequired,
-                      onChanged: (value) => setState(() => certificateRequired = value ?? false),
+                      onChanged: (value) =>
+                          setState(() => certificateRequired = value ?? false),
                     ),
                     const Text("Certificate"),
                   ],
                 ),
-
                 const SizedBox(height: 20),
                 const Text(
                   "Safety Instructions",
@@ -157,7 +158,6 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                     hintText: "Enter Safety Instructions...",
                   ),
                 ),
-
                 const SizedBox(height: 30),
                 Center(
                   child: ElevatedButton(
@@ -166,49 +166,54 @@ class _PostJobStep2ScreenState extends State<PostJobStep2Screen> {
                       minimumSize: const Size(150, 45),
                     ),
                     onPressed: () {
-                      // ✅ Collect selected skills
+                      //  Collect selected skills
                       List<String> selectedSkills = [];
                       for (int i = 0; i < skills.length; i++) {
                         if (skillsSelected[i]) selectedSkills.add(skills[i]);
                       }
 
-                      // ✅ Collect documents
+                      //  Collect documents
                       List<String> documentsRequired = [];
                       if (idRequired) documentsRequired.add("ID");
-                      if (certificateRequired) documentsRequired.add("Certificate");
+                      if (certificateRequired)
+                        documentsRequired.add("Certificate");
 
-                      // ✅ Merge data from step 1 and step 2
+                      //  Merge data from step 1 and step 2
                       final updatedJobData = CreateJobRequest(
-                        jobTitle: widget.jobData.jobTitle,
-                        location: widget.jobData.location,
-                        address: widget.jobData.address,
-                        jobType: widget.jobData.jobType,
-                        workersRequired: widget.jobData.workersRequired,
-                        skillsRequired: selectedSkills,
-                        toolsProvided: toolsProvided,
-                        documentsRequired: documentsRequired,
-                        safetyInstructions: safetyController.text.trim(),
-                        startDate: widget.jobData.startDate,
-                        endDate: widget.jobData.endDate,
-                        shift: widget.jobData.shift,
-                        payType: widget.jobData.payType,
-                        payAmount: widget.jobData.payAmount,
-                        advancePayment: widget.jobData.advancePayment,
-                        advanceAmount: widget.jobData.advanceAmount,
-                        user_id: widget.jobData.user_id
-                      );
+                          jobTitle: widget.jobData.jobTitle,
+                          location: widget.jobData.location,
+                          address: widget.jobData.address,
+                          jobType: widget.jobData.jobType,
+                          workersRequired: widget.jobData.workersRequired,
+                          skillsRequired: selectedSkills,
+                          toolsProvided: toolsProvided,
+                          documentsRequired: documentsRequired,
+                          safetyInstructions:
+                              safetyController.text.trim().isEmpty
+                                  ? ""
+                                  : safetyController.text.trim(),
+                          startDate: widget.jobData.startDate,
+                          endDate: widget.jobData.endDate,
+                          shift: widget.jobData.shift,
+                          payType: widget.jobData.payType,
+                          payAmount: widget.jobData.payAmount,
+                          advancePayment: widget.jobData.advancePayment,
+                          advanceAmount: widget.jobData.advanceAmount,
+                          user_id: widget.jobData.user_id);
 
-                      // ✅ Go to Step 3
+                      //  Go to Step 3
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PostAJobThree(jobData: updatedJobData),
+                          builder: (context) =>
+                              PostAJobThree(jobData: updatedJobData),
                         ),
                       );
                     },
                     child: const Text(
                       "Next",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

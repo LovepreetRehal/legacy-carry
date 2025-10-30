@@ -32,7 +32,7 @@ class _SplaceScreenState extends State<SplaceScreen> {
     debugPrint("🧑‍💼 Saved Role: $role");
 
     if (token != null && role != null) {
-      // ✅ User already logged in, navigate based on role
+      //  User already logged in, navigate based on role
       if (role == 'customer') {
         Navigator.pushReplacement(
           context,
@@ -56,7 +56,7 @@ class _SplaceScreenState extends State<SplaceScreen> {
         );
       }
     } else {
-      // ❌ No login info found → Go to sign-in
+      //  No login info found → Go to sign-in
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

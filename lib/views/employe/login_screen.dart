@@ -50,7 +50,6 @@ class LoginScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 const SizedBox(height: 20),
-
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -61,7 +60,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 15),
-
                 TextField(
                   controller: passwordController,
                   obscureText: true,
@@ -73,7 +71,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 if (loginVM.status == LoginStatus.loading)
                   const CircularProgressIndicator()
                 else
@@ -83,14 +80,9 @@ class LoginScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () async {
                         await loginVM.login(
-                          "john@examplde.com",
-                          "secret123",
+                          emailController.text.trim(),
+                          passwordController.text.trim(),
                         );
-
-                        // await loginVM.login(
-                        //   emailController.text.trim(),
-                        //   passwordController.text.trim(),
-                        // );
 
                         if (loginVM.status == LoginStatus.success) {
                           Navigator.pushReplacement(

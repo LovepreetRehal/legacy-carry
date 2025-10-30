@@ -44,9 +44,9 @@ class CreateJobRequest {
       "address": address,
       "job_type": jobType,
       "workers_required": workersRequired,
-      "skills_required": skillsRequired,
+      "skills_required": skillsRequired, // send as list
       "tools_provided": toolsProvided,
-      "documents_required": documentsRequired,
+      "documents_required": documentsRequired, // send as list
       "safety_instructions": safetyInstructions,
       "start_date": startDate,
       "end_date": endDate,
@@ -55,7 +55,7 @@ class CreateJobRequest {
       "pay_amount": payAmount,
       "advance_payment": advancePayment,
       "advance_amount": advanceAmount,
-      "user_id": user_id,
+      "user_id": user_id.toString(),
     };
   }
 }

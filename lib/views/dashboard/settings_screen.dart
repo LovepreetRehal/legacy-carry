@@ -74,8 +74,8 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Payout Method Section
-                const SectionTitle(title: 'Payout Method'),
-                _buildPayoutCard(),
+               // const SectionTitle(title: 'Payout Method'),
+                //_buildPayoutCard(),
 
                 const SizedBox(height: 16),
 

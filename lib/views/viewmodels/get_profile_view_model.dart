@@ -22,11 +22,14 @@ class GetProfileViewModel extends ChangeNotifier {
 
     try {
       final data = await _authService.getUserProfile();
-      _profileData = data['data']; // assuming API returns {status: true, data: {...}}
+      _profileData =
+          data; // Store the entire response {status: true, user: {...}}
       _status = ProfileStatus.success;
+      print(" Profile data fetched: ${data['user']?['name']}");
     } catch (e) {
       _errorMessage = e.toString();
       _status = ProfileStatus.error;
+      print(" Error fetching profile: $e");
     }
 
     notifyListeners();

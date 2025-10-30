@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:legacy_carry/views/dashboard/home_screen.dart';
 import 'package:legacy_carry/views/dashboard/my_job_screen.dart';
 import 'package:legacy_carry/views/dashboard/search_screen.dart';
+import 'package:legacy_carry/views/resident/resident_home_screen.dart';
 
 import '../dashboard/edit_profie.dart';
 import '../dashboard/messages_screen.dart';
 import '../dashboard/settings_screen.dart';
-import 'find_my_jobs_screen.dart';
 
 class ResidentDashboardScreen extends StatefulWidget {
   const ResidentDashboardScreen({super.key});
@@ -19,8 +18,8 @@ class _ResidentDashboardScreen extends State<ResidentDashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomeScreen(),    // Dashboard / Home
-    const FindMyJobsScreen(),
+    const ResidentHomeScreen(), // Show resident's own dashboard
+    const SearchJobsScreen(),
     const MyJobsScreen(),
     const MessagesScreen(),
     const SettingsScreen(),
@@ -57,13 +56,14 @@ class _ResidentDashboardScreen extends State<ResidentDashboardScreen> {
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.black54,
         currentIndex: _selectedIndex, // track selected
-        onTap: _onItemTapped,         // handle tap
+        onTap: _onItemTapped, // handle tap
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(icon: Icon(Icons.work), label: "Jobs"),
           BottomNavigationBarItem(icon: Icon(Icons.message), label: "Messages"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: "Settings"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
       ),

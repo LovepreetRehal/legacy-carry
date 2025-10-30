@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/create_job_request.dart';
 import '../viewmodels/post_job_viewmodel.dart';
+import 'resident_dashboard_screen.dart';
+import '../services/auth_service.dart';
 
 class PostAJobThree extends StatelessWidget {
   final CreateJobRequest jobData;
@@ -21,13 +22,15 @@ class PostAJobThree extends StatelessWidget {
 class _PostJobStep3Content extends StatefulWidget {
   final CreateJobRequest jobData;
 
-  const _PostJobStep3Content({required this.jobData, Key? key}) : super(key: key);
+  const _PostJobStep3Content({required this.jobData, Key? key})
+      : super(key: key);
 
   @override
   State<_PostJobStep3Content> createState() => _PostJobStep3ScreenState();
 }
 
 class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
+  final AuthService _authService = AuthService();
   final TextEditingController startDateController = TextEditingController();
   final TextEditingController endDateController = TextEditingController();
   final TextEditingController payAmountController = TextEditingController();
@@ -40,8 +43,27 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
   final shifts = ["Morning (08:00am-12:00pm)", "Afternoon", "Evening"];
   final payTypes = ["Per Hour", "Per Day", "Per Job"];
 
+  // Method to get logged-in user ID
+  Future<int> _getUserId() async {
+    try {
+      final profileData = await _authService.getUserProfile();
+      final userId = profileData['user']?['id'] ??
+          profileData['data']?['id'] ??
+          profileData['id'];
+
+      if (userId != null) {
+        return int.tryParse(userId.toString()) ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('Error getting user ID: $e');
+      return 0;
+    }
+  }
+
   // 🗓 Date Picker helper
-  Future<void> _pickDate(BuildContext context, TextEditingController controller) async {
+  Future<void> _pickDate(
+      BuildContext context, TextEditingController controller) async {
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -49,7 +71,8 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
       lastDate: DateTime(2030),
     );
     if (picked != null) {
-      controller.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      controller.text =
+          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
     }
   }
 
@@ -131,8 +154,11 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                     labelText: "Shift",
                     border: OutlineInputBorder(),
                   ),
-                  items: shifts.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (val) => setState(() => selectedShift = val ?? shifts[0]),
+                  items: shifts
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) =>
+                      setState(() => selectedShift = val ?? shifts[0]),
                 ),
                 const SizedBox(height: 10),
 
@@ -143,8 +169,11 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                     labelText: "Pay Type",
                     border: OutlineInputBorder(),
                   ),
-                  items: payTypes.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                  onChanged: (val) => setState(() => selectedPayType = val ?? payTypes[0]),
+                  items: payTypes
+                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .toList(),
+                  onChanged: (val) =>
+                      setState(() => selectedPayType = val ?? payTypes[0]),
                 ),
                 const SizedBox(height: 10),
 
@@ -168,8 +197,10 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                       child: ElevatedButton(
                         onPressed: () => setState(() => advancePayment = true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: advancePayment ? Colors.green : Colors.white,
-                          foregroundColor: advancePayment ? Colors.white : Colors.black,
+                          backgroundColor:
+                              advancePayment ? Colors.green : Colors.white,
+                          foregroundColor:
+                              advancePayment ? Colors.white : Colors.black,
                         ),
                         child: const Text("YES"),
                       ),
@@ -179,8 +210,10 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                       child: ElevatedButton(
                         onPressed: () => setState(() => advancePayment = false),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !advancePayment ? Colors.green : Colors.white,
-                          foregroundColor: !advancePayment ? Colors.white : Colors.black,
+                          backgroundColor:
+                              !advancePayment ? Colors.green : Colors.white,
+                          foregroundColor:
+                              !advancePayment ? Colors.white : Colors.black,
                         ),
                         child: const Text("NO"),
                       ),
@@ -208,11 +241,21 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                       minimumSize: const Size(150, 45),
                     ),
                     onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final userId = prefs.getInt('user_id'); // getInt returns int? (nullable)
+                      //  Step 1: Get logged-in user ID
+                      final userId = await _getUserId();
 
+                      if (userId == 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                " Unable to get user information. Please login again."),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
 
-                      // ✅ Step 1: Build the request
+                      //  Step 2: Build the request
                       final request = CreateJobRequest(
                         jobTitle: widget.jobData.jobTitle,
                         location: widget.jobData.location,
@@ -221,47 +264,59 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                         workersRequired: widget.jobData.workersRequired,
                         skillsRequired: widget.jobData.skillsRequired,
                         toolsProvided: widget.jobData.toolsProvided,
-                        documentsRequired: ["ID"],
-                        // documentsRequired: widget.jobData.documentsRequired,
+                        documentsRequired: widget.jobData.documentsRequired,
                         safetyInstructions: widget.jobData.safetyInstructions,
                         startDate: startDateController.text.trim(),
                         endDate: endDateController.text.trim(),
                         shift: "morning",
                         payType: "per_day",
-                        payAmount: int.tryParse(payAmountController.text.trim()) ?? 0,
+                        payAmount:
+                            int.tryParse(payAmountController.text.trim()) ?? 0,
                         advancePayment: advancePayment,
-                        advanceAmount: int.tryParse(advanceAmountController.text.trim()) ?? 0,
-                        user_id: userId!, // ⚠️ will show “invalid user id” if 0
+                        advanceAmount:
+                            int.tryParse(advanceAmountController.text.trim()) ??
+                                0,
+                        user_id:
+                            userId, // Dynamically fetched from logged-in user
                       );
 
-                      final jobViewModel = Provider.of<PostJobViewmodel>(context, listen: false);
+                      final jobViewModel =
+                          Provider.of<PostJobViewmodel>(context, listen: false);
 
-                      // ✅ Step 2: Create job
+                      // Step 3: Create job
                       await jobViewModel.createJob(request);
 
-                      // ✅ Step 3: Handle result
+                      //  Step 4: Handle result
                       if (jobViewModel.status == PostJobStatus.success) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("✅ Job created successfully!"),
+                            content: Text(" Job created successfully!"),
                             backgroundColor: Colors.green,
                           ),
                         );
-                        Navigator.pop(context);
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const ResidentDashboardScreen(),
+                          ),
+                          (route) => false,
+                        );
                       } else {
                         String message = jobViewModel.errorMessage;
 
-                        // ✅ Clean up the exception message to show nicely
+                        // Clean up the exception message to show nicely
                         if (message.contains('Exception:')) {
                           message = message.replaceAll('Exception:', '').trim();
                         }
                         if (message.contains('Error creating job:')) {
-                          message = message.replaceAll('Error creating job:', '').trim();
+                          message = message
+                              .replaceAll('Error creating job:', '')
+                              .trim();
                         }
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text("❌ Job creation failed: $message"),
+                            content: Text(" Job creation failed: $message"),
                             backgroundColor: Colors.redAccent,
                             duration: const Duration(seconds: 3),
                           ),
@@ -271,15 +326,11 @@ class _PostJobStep3ScreenState extends State<_PostJobStep3Content> {
                     child: const Text("Review Job"),
                   ),
                 ),
-               ],
+              ],
             ),
           ),
         ),
       ),
     );
   }
-
-
 }
-
-
