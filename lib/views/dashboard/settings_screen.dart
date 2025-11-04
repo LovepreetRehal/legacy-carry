@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/change_password_screen.dart';
+import 'package:legacy_carry/views/contact_support_screen.dart';
+import 'package:legacy_carry/views/dashboard/edit_profie.dart';
+import 'package:legacy_carry/views/job_alerts_screen.dart';
+import 'package:legacy_carry/views/manage_documents_screen.dart';
+import 'package:legacy_carry/views/report_problem_screen.dart';
 import 'package:legacy_carry/views/splace_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,7 +57,10 @@ class SettingsScreen extends StatelessWidget {
                 _buildTile(
                   icon: Icons.person_outline,
                   title: 'Edit Profile',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const EditProfileScreen(),));
+
+                  },
                 ),
                 _buildTile(
                   icon: Icons.language,
@@ -67,8 +76,13 @@ class SettingsScreen extends StatelessWidget {
 
                 // Notifications Section
                 const SectionTitle(title: 'Notifications'),
-                _buildSwitchTile('Job Alerts', true, (val) {}),
-                _buildSwitchTile('Message Notifications', true, (val) {}),
+                _buildSwitchTile('Job Alerts', true, (val) {
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const JobAlertsScreen(),));
+
+                }),
+                _buildSwitchTile('Message Notifications', true, (val) {
+
+                }),
                 _buildSwitchTile('Payment Updates', false, (val) {}),
 
                 const SizedBox(height: 16),
@@ -84,12 +98,18 @@ class SettingsScreen extends StatelessWidget {
                 _buildTile(
                   icon: Icons.lock_outline,
                   title: 'Change Password',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen(),));
+
+                   },
                 ),
                 _buildTile(
                   icon: Icons.file_copy_outlined,
                   title: 'Manage Documents',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ManageDocumentsScreen(),));
+
+                  },
                 ),
                 _buildTile(
                   icon: Icons.logout,
@@ -107,17 +127,26 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.help_outline,
                   title: 'FAQ’s',
                   trailing: const Icon(Icons.keyboard_arrow_down),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ContactSupportScreen(),));
+
+                  },
                 ),
                 _buildTile(
                   icon: Icons.phone_outlined,
                   title: 'Contact Support',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ContactSupportScreen(),));
+
+                  },
                 ),
                 _buildTile(
                   icon: Icons.report_problem_outlined,
                   title: 'Report a Problem',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ReportProblemScreen(),));
+
+                  },
                 ),
 
                 const SizedBox(height: 30),
