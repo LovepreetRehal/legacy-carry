@@ -1,9 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../employe/job_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +130,7 @@ class HomeScreen extends StatelessWidget {
                 // Availability Switch
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(12),
@@ -155,6 +155,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 _buildJobCard(
+                  context: context,
                   title: "Carpentry at Green Meadows",
                   company: "Rajiv Kumar",
                   date: "18 Sep 2025",
@@ -163,6 +164,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildJobCard(
+                  context: context,
                   title: "Painter Job",
                   company: "Raj Interiors",
                   date: "17 Sep 2025",
@@ -189,8 +191,8 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             Text(value,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 18)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 4),
             Text(title, style: const TextStyle(color: Colors.black54)),
           ],
@@ -200,65 +202,114 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildJobCard({
+    required BuildContext context,
     required String title,
     required String company,
     required String date,
     required String pay,
     required String distance,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.person, size: 16, color: Colors.green),
-              const SizedBox(width: 6),
-              Text(company),
-              const Spacer(),
-              const Icon(Icons.calendar_today,
-                  size: 16, color: Colors.redAccent),
-              const SizedBox(width: 6),
-              Text(date),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.attach_money, size: 16, color: Colors.orange),
-              const SizedBox(width: 6),
-              Text(pay),
-              const Spacer(),
-              const Icon(Icons.location_on, size: 16, color: Colors.pink),
-              const SizedBox(width: 6),
-              Text(distance),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              ),
-              onPressed: () {},
-              child: const Text("APPLY"),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => JobDetailScreen(
+              jobData: {
+                'job_title': title,
+                'employer_name': company,
+                'start_date': date,
+                'pay_amount': pay.split('₹')[1].split(' /')[0],
+                'pay_type': pay.contains('Day') ? 'per_day' : 'per_hour',
+                'location': distance,
+                'rating': 5.0,
+                'reviews': 24,
+                'tasks': 'Wood cutting, furniture repair',
+                'tools_provided': true,
+                'time': '9:00 AM',
+                'expected_duration': '3 Days',
+              },
             ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.person, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Text(company),
+                const Spacer(),
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Colors.redAccent),
+                const SizedBox(width: 6),
+                Text(date),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.attach_money, size: 16, color: Colors.orange),
+                const SizedBox(width: 6),
+                Text(pay),
+                const Spacer(),
+                const Icon(Icons.location_on, size: 16, color: Colors.pink),
+                const SizedBox(width: 6),
+                Text(distance),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => JobDetailScreen(
+                        jobData: {
+                          'job_title': title,
+                          'employer_name': company,
+                          'start_date': date,
+                          'pay_amount': pay.split('₹')[1].split(' /')[0],
+                          'pay_type':
+                              pay.contains('Day') ? 'per_day' : 'per_hour',
+                          'location': distance,
+                          'rating': 5.0,
+                          'reviews': 24,
+                          'tasks': 'Wood cutting, furniture repair',
+                          'tools_provided': true,
+                          'time': '9:00 AM',
+                          'expected_duration': '3 Days',
+                        },
+                      ),
+                    ),
+                  );
+                },
+                child: const Text("APPLY"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

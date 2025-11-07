@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/resident/payments_screen.dart';
 import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 import '../services/auth_service.dart';
 
@@ -215,7 +216,17 @@ class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
                   builder: (context) => const PostAJobOne(),
                 ),
               );
-            } else {
+            } 
+            else if (label == "Payments") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PaymentsScreen(),
+                ),
+              );
+            }
+            
+            else {
               // Placeholder: You can implement navigation for other buttons as desired
             }
           },

@@ -30,7 +30,6 @@ class ContactSupportScreen extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back, color: Colors.black),
                   onPressed: () => Navigator.pop(context),
                 ),
-
                 const Center(
                   child: Text(
                     "Contact Support",
@@ -40,9 +39,7 @@ class ContactSupportScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
                 _supportCard(
                   context,
                   title: "Chat with Us",
@@ -55,36 +52,51 @@ class ContactSupportScreen extends StatelessWidget {
                     // );
                   },
                 ),
-
                 const SizedBox(height: 15),
-
                 _supportCard(
                   context,
                   title: "Call Helpline",
                   subtitle: "Speak directly with our support team.",
                   buttonText: "Call Now",
                   onTap: () async {
-                    final Uri uri = Uri(scheme: 'tel', path: phoneNumber);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
+                    final Uri phoneUri = Uri.parse('tel:$phoneNumber');
+                    try {
+                      await launchUrl(phoneUri);
+                    } catch (e) {
+                      // Handle error if dialer can't be opened
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Unable to open phone dialer'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
-
                 const SizedBox(height: 15),
-
                 _supportCard(
                   context,
                   title: "Email Support",
                   subtitle: "Send us your query & we'll reply within 24 hrs.",
                   buttonText: "Send Email",
                   onTap: () async {
-                    final Uri uri = Uri(
-                      scheme: 'mailto',
-                      path: email,
-                      query: 'subject=Support Request&body=Hi, I need help regarding...',
-                    );
-                    await launchUrl(uri);
+                    final Uri emailUri = Uri.parse(
+                        'mailto:$email?subject=Support Request&body=Hi, I need help regarding...');
+                    try {
+                      await launchUrl(emailUri);
+                    } catch (e) {
+                      // Handle error if email app can't be opened
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Unable to open email app'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],
@@ -95,10 +107,11 @@ class ContactSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _supportCard(BuildContext context, {required String title,
-        required String subtitle,
-        required String buttonText,
-        required VoidCallback onTap}) {
+  Widget _supportCard(BuildContext context,
+      {required String title,
+      required String subtitle,
+      required String buttonText,
+      required VoidCallback onTap}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -116,7 +129,8 @@ class ContactSupportScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
           Text(subtitle, style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 12),
@@ -124,7 +138,8 @@ class ContactSupportScreen extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onTap,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 backgroundColor: Colors.grey.shade200,
                 foregroundColor: Colors.black,
               ),

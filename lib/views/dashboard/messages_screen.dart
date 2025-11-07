@@ -5,26 +5,29 @@ class MessagesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> messages = [
-      {
-        'name': 'Rahul Sharma',
-        'message': 'Hey, did you Reach?',
-        'time': '10:32 am',
-        'unread': 2,
-      },
-      {
-        'name': 'Amit Kumar',
-        'message': 'Typing.....',
-        'time': '09:41 am',
-        'unread': 0,
-      },
-      {
-        'name': 'Priya Mehta',
-        'message': 'Okay',
-        'time': '08:32 am',
-        'unread': 1,
-      },
-    ];
+    // Static data commented out
+    // final List<Map<String, dynamic>> messages = [
+    //   {
+    //     'name': 'Rahul Sharma',
+    //     'message': 'Hey, did you Reach?',
+    //     'time': '10:32 am',
+    //     'unread': 2,
+    //   },
+    //   {
+    //     'name': 'Amit Kumar',
+    //     'message': 'Typing.....',
+    //     'time': '09:41 am',
+    //     'unread': 0,
+    //   },
+    //   {
+    //     'name': 'Priya Mehta',
+    //     'message': 'Okay',
+    //     'time': '08:32 am',
+    //     'unread': 1,
+    //   },
+    // ];
+
+    final List<Map<String, dynamic>> messages = [];
 
     return Scaffold(
       body: Container(
@@ -40,7 +43,8 @@ class MessagesScreen extends StatelessWidget {
             children: [
               // Top Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -75,66 +79,91 @@ class MessagesScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
-                  child: ListView.builder(
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.person, color: Colors.green[800]),
-                        ),
-                        title: Text(
-                          msg['name'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          msg['message'],
-                          style: TextStyle(
-                            color: msg['message'].contains('Typing')
-                                ? Colors.green
-                                : Colors.black54,
-                            fontStyle: msg['message'].contains('Typing')
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                          ),
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              msg['time'],
-                              style: const TextStyle(fontSize: 12, color: Colors.black87),
-                            ),
-                            const SizedBox(height: 4),
-                            if (msg['unread'] > 0)
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: const BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  msg['unread'].toString(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                  child: messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.message_outlined,
+                                size: 64,
+                                color: Colors.white.withOpacity(0.7),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No messages yet',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = messages[index];
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                child: Icon(Icons.person,
+                                    color: Colors.green[800]),
+                              ),
+                              title: Text(
+                                msg['name'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: Text(
+                                msg['message'],
+                                style: TextStyle(
+                                  color: msg['message'].contains('Typing')
+                                      ? Colors.green
+                                      : Colors.black54,
+                                  fontStyle: msg['message'].contains('Typing')
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                ),
+                              ),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    msg['time'],
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (msg['unread'] > 0)
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.green,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        msg['unread'].toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              onTap: () {
+                                // TODO: Navigate to chat screen
+                              },
+                            );
+                          },
                         ),
-                        onTap: () {
-                          // TODO: Navigate to chat screen
-                        },
-                      );
-                    },
-                  ),
                 ),
               ),
             ],

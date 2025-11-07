@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/get_profile_view_model.dart';
+import '../services/auth_service.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
@@ -28,9 +29,11 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   late TextEditingController emailController;
   late TextEditingController phoneController;
   bool _dataSet = false;
-  XFile? _image; // ✅ Store the selected photo
+  bool _isSaving = false;
+  XFile? _image; //  Store the selected photo
 
-  final ImagePicker _picker = ImagePicker(); // ✅ Initialize ImagePicker
+  final ImagePicker _picker = ImagePicker(); //  Initialize ImagePicker
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -45,12 +48,45 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   }
 
   Future<void> _pickImage() async {
-    final pickedImage = await _picker.pickImage(source: ImageSource.camera);
-    if (pickedImage != null) {
-      setState(() {
-        _image = pickedImage;
-      });
-    }
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final pickedImage =
+                      await _picker.pickImage(source: ImageSource.gallery);
+                  if (pickedImage != null) {
+                    setState(() {
+                      _image = pickedImage;
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take a Photo'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final pickedImage =
+                      await _picker.pickImage(source: ImageSource.camera);
+                  if (pickedImage != null) {
+                    setState(() {
+                      _image = pickedImage;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -62,28 +98,137 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   }
 
   Future<void> _saveProfile() async {
-    // TODO: Implement profile update API call
-    // final updatedData = {
-    //   "name": nameController.text.trim(),
-    //   "email": emailController.text.trim(),
-    //   "phone": phoneController.text.trim(),
-    // };
+    // Validate inputs
+    if (nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your name"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your email"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (phoneController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your phone number"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
 
     try {
-      // Optional: You can upload the image here with your API.
-      // final res = await AuthService().updateProfile(updatedData, _image);
+      // Get user ID from profile data
+      final profileVM =
+          Provider.of<GetProfileViewModel>(context, listen: false);
+      final user = profileVM.profileData?['user'];
 
-      print("Name: ${nameController.text.trim()}");
-      print("Email: ${emailController.text.trim()}");
-      print("Phone: ${phoneController.text.trim()}");
+      if (user == null || user['id'] == null) {
+        throw Exception('User ID not found. Please try again.');
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully")),
+      final userId = int.tryParse(user['id'].toString());
+      if (userId == null) {
+        throw Exception('Invalid user ID');
+      }
+
+      // Convert XFile to File if image is selected
+      File? avatarFile;
+      if (_image != null) {
+        avatarFile = File(_image!.path);
+      }
+
+      // Call update profile API
+      final response = await _authService.updateUserProfile(
+        userId: userId,
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
+        phone: phoneController.text.trim(),
+        avatar: avatarFile,
       );
+
+      // Clear the local image state so it shows the server image
+      if (mounted) {
+        setState(() {
+          _image = null; // Clear local image to show server image
+        });
+      }
+
+      // Update profile data with response if it contains user data
+      // This ensures we have the latest avatar URL immediately
+      if (response['data'] != null && mounted) {
+        // Update the profile data directly from response
+        final updatedUser = response['data'];
+        print(
+            "📸 Updated user data from response - Avatar: ${updatedUser['avatar']}");
+        final currentProfileData = profileVM.profileData ?? {};
+        final updatedProfileData = {
+          ...currentProfileData,
+          'user': updatedUser,
+        };
+        profileVM.updateProfileData(updatedProfileData);
+      }
+
+      // Refresh profile data to get updated avatar URL (in case response didn't have it)
+      await profileVM.fetchProfile();
+
+      // Debug: Print avatar URL after refresh
+      final refreshedUser = profileVM.profileData?['user'];
+      print(" Avatar URL after refresh: ${refreshedUser?['avatar']}");
+
+      // Force a rebuild to show the updated avatar
+      if (mounted) {
+        setState(() {});
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(response['message'] ?? "Profile updated successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Small delay to ensure avatar is visible before navigating back
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          // Navigate back after successful update
+          Navigator.pop(context);
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 
@@ -93,10 +238,10 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         title: const Text(
           "Edit Profile",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
@@ -210,22 +355,65 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                         child: Stack(
                           alignment: Alignment.bottomRight,
                           children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.white,
-                              backgroundImage: _image != null
-                                  ? FileImage(File(_image!.path))
-                                  : null,
-                              child: _image == null
-                                  ? const Text(
-                                      'PHOTO',
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    )
-                                  : null,
+                            Consumer<GetProfileViewModel>(
+                              builder: (context, profileVM, child) {
+                                final user = profileVM.profileData?['user'];
+                                String? existingAvatarUrl =
+                                    user?['avatar']?.toString();
+
+                                // Handle relative URLs by prepending base URL if needed
+                                if (existingAvatarUrl != null &&
+                                    existingAvatarUrl.isNotEmpty) {
+                                  // If it's a relative URL, prepend the base URL
+                                  if (!existingAvatarUrl
+                                          .startsWith('http://') &&
+                                      !existingAvatarUrl
+                                          .startsWith('https://')) {
+                                    // Remove leading slash if present
+                                    if (existingAvatarUrl.startsWith('/')) {
+                                      existingAvatarUrl =
+                                          existingAvatarUrl.substring(1);
+                                    }
+                                    // Prepend base URL (without /api)
+                                    final baseUrl =
+                                        _authService.baseUrlWithoutApi;
+                                    existingAvatarUrl =
+                                        '$baseUrl/$existingAvatarUrl';
+                                  }
+                                }
+
+                                print(
+                                    "🖼️ Avatar URL: $existingAvatarUrl"); // Debug print
+
+                                return CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: _image != null
+                                      ? FileImage(File(_image!.path))
+                                      : (existingAvatarUrl != null &&
+                                              existingAvatarUrl.isNotEmpty)
+                                          ? NetworkImage(existingAvatarUrl)
+                                              as ImageProvider
+                                          : null,
+                                  onBackgroundImageError:
+                                      (exception, stackTrace) {
+                                    print("❌ Error loading avatar: $exception");
+                                    print("URL was: $existingAvatarUrl");
+                                  },
+                                  child: _image == null &&
+                                          (existingAvatarUrl == null ||
+                                              existingAvatarUrl.isEmpty)
+                                      ? const Text(
+                                          'PHOTO',
+                                          style: TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        )
+                                      : null,
+                                );
+                              },
                             ),
                             Container(
                               decoration: const BoxDecoration(
@@ -305,16 +493,28 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(6),
                             ),
+                            disabledBackgroundColor: Colors.grey,
                           ),
-                          onPressed: _saveProfile,
-                          child: const Text(
-                            "Save Changes",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          onPressed: _isSaving ? null : _saveProfile,
+                          child: _isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  "Save Changes",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       )
                     ],

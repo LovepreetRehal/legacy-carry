@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/change_password_screen.dart';
 import 'package:legacy_carry/views/contact_support_screen.dart';
 import 'package:legacy_carry/views/dashboard/edit_profie.dart';
+import 'package:legacy_carry/views/faq_screen.dart';
 import 'package:legacy_carry/views/job_alerts_screen.dart';
 import 'package:legacy_carry/views/manage_documents_screen.dart';
 import 'package:legacy_carry/views/report_problem_screen.dart';
 import 'package:legacy_carry/views/splace_screen.dart';
+import 'package:legacy_carry/views/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -58,8 +60,11 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.person_outline,
                   title: 'Edit Profile',
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const EditProfileScreen(),));
-
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ));
                   },
                 ),
                 _buildTile(
@@ -77,18 +82,19 @@ class SettingsScreen extends StatelessWidget {
                 // Notifications Section
                 const SectionTitle(title: 'Notifications'),
                 _buildSwitchTile('Job Alerts', true, (val) {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const JobAlertsScreen(),));
-
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const JobAlertsScreen(),
+                      ));
                 }),
-                _buildSwitchTile('Message Notifications', true, (val) {
-
-                }),
+                _buildSwitchTile('Message Notifications', true, (val) {}),
                 _buildSwitchTile('Payment Updates', false, (val) {}),
 
                 const SizedBox(height: 16),
 
                 // Payout Method Section
-               // const SectionTitle(title: 'Payout Method'),
+                // const SectionTitle(title: 'Payout Method'),
                 //_buildPayoutCard(),
 
                 const SizedBox(height: 16),
@@ -99,23 +105,31 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.lock_outline,
                   title: 'Change Password',
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen(),));
-
-                   },
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ));
+                  },
                 ),
                 _buildTile(
                   icon: Icons.file_copy_outlined,
                   title: 'Manage Documents',
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ManageDocumentsScreen(),));
-
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ManageDocumentsScreen(),
+                        ));
                   },
                 ),
                 _buildTile(
                   icon: Icons.logout,
                   title: 'Logout',
                   onTap: () {
-                    _showLogoutDialog(context);
+                    // Capture the SettingsScreen context
+                    final settingsContext = context;
+                    _showLogoutDialog(settingsContext);
                   },
                 ),
 
@@ -125,27 +139,36 @@ class SettingsScreen extends StatelessWidget {
                 const SectionTitle(title: 'Help & Support'),
                 _buildTile(
                   icon: Icons.help_outline,
-                  title: 'FAQ’s',
+                  title: 'FAQ\'s',
                   trailing: const Icon(Icons.keyboard_arrow_down),
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ContactSupportScreen(),));
-
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FAQScreen(),
+                        ));
                   },
                 ),
                 _buildTile(
                   icon: Icons.phone_outlined,
                   title: 'Contact Support',
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ContactSupportScreen(),));
-
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ContactSupportScreen(),
+                        ));
                   },
                 ),
                 _buildTile(
                   icon: Icons.report_problem_outlined,
                   title: 'Report a Problem',
                   onTap: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ReportProblemScreen(),));
-
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReportProblemScreen(),
+                        ));
                   },
                 ),
 
@@ -226,7 +249,8 @@ class SettingsScreen extends StatelessWidget {
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -238,7 +262,8 @@ class SettingsScreen extends StatelessWidget {
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -263,21 +288,20 @@ class SettingsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
-            child: const Text('+UPI +Bank Account', style: TextStyle(fontSize: 12)),
+            child: const Text('+UPI +Bank Account',
+                style: TextStyle(fontSize: 12)),
           ),
         ],
       ),
     );
   }
-
-
 }
 
-void _showLogoutDialog(BuildContext context) {
+void _showLogoutDialog(BuildContext settingsContext) {
   showDialog(
-    context: context,
+    context: settingsContext,
     barrierDismissible: false, // prevent dismissing by tapping outside
-    builder: (BuildContext context) {
+    builder: (BuildContext dialogContext) {
       return Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         backgroundColor: const Color(0xFFD4B04A), // dialog background
@@ -302,21 +326,75 @@ void _showLogoutDialog(BuildContext context) {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[800],
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
                     onPressed: () async {
-                      // Close the dialog first
-                      Navigator.of(context).pop();
+                      // Close the logout confirmation dialog first
+                      Navigator.of(dialogContext).pop();
 
-                      // Clear all SharedPreferences data
-                      SharedPreferences prefs = await SharedPreferences.getInstance();
-                      await prefs.clear();
+                      // Wait a frame to ensure dialog is closed
+                      await Future.delayed(const Duration(milliseconds: 50));
+
+                      // Show loading indicator using SettingsScreen context
+                      showDialog(
+                        context: settingsContext,
+                        barrierDismissible: false,
+                        builder: (BuildContext loadingDialogContext) {
+                          return const Dialog(
+                            backgroundColor: Colors.transparent,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                      );
+
+                      try {
+                        // Call logout API
+                        final authService = AuthService();
+                        await authService.logout();
+                        print("✅ Logout API called successfully");
+                      } catch (e) {
+                        print("Error during logout API call: $e");
+                        // Continue with local logout even if API fails
+                      }
+
+                      // Clear all SharedPreferences data (in case API didn't clear it)
+                      try {
+                        SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        print("✅ SharedPreferences cleared");
+                      } catch (e) {
+                        print("Error clearing SharedPreferences: $e");
+                      }
+
+                      // Close loading dialog using SettingsScreen context
+                      if (settingsContext.mounted) {
+                        try {
+                          Navigator.of(settingsContext).pop();
+                          print("✅ Loading dialog closed");
+                        } catch (e) {
+                          print("Error closing loading dialog: $e");
+                        }
+                      }
+
+                      // Small delay to ensure dialog is fully closed
+                      await Future.delayed(const Duration(milliseconds: 100));
 
                       // Navigate to WelcomeScreen and remove all previous routes
-                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const SplaceScreen()), (Route<dynamic> route) => false,);
+                      if (settingsContext.mounted) {
+                        print("✅ Navigating to splash screen");
+                        Navigator.of(settingsContext).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (context) => const SplaceScreen()),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
                     },
                     child: const Text(
                       'Yes , Logout',
@@ -327,13 +405,15 @@ void _showLogoutDialog(BuildContext context) {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop(); // Just close the dialog
+                      Navigator.of(dialogContext)
+                          .pop(); // Just close the dialog
                     },
                     child: const Text(
                       'Cancel',

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../services/auth_service.dart';
 
 class ApplyForJobScreen extends StatefulWidget {
-  const ApplyForJobScreen({Key? key}) : super(key: key);
+  final String jobId;
+
+  const ApplyForJobScreen({Key? key, required this.jobId}) : super(key: key);
 
   @override
   State<ApplyForJobScreen> createState() => _ApplyForJobScreenState();
@@ -11,6 +16,13 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
   final TextEditingController dateController = TextEditingController();
   final TextEditingController costController = TextEditingController();
   final TextEditingController messageController = TextEditingController();
+  final AuthService _authService = AuthService();
+  final ImagePicker _imagePicker = ImagePicker();
+
+  File? _certificatePhoto;
+  bool _isLoading = false;
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +82,10 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
 
                     if (time != null) {
                       setState(() {
+                        _selectedDate = date;
+                        _selectedTime = time;
                         dateController.text =
-                        "${date.day}-${date.month}-${date.year} ${time.format(context)}";
+                            "${date.day}-${date.month}-${date.year} ${time.format(context)}";
                       });
                     }
                   }
@@ -102,20 +116,62 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
 
               // Upload File
               _buildInputLabel("Attach Certificate / Photo"),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.black54),
-                  color: Colors.white,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text("Choose File  No file chosen",
-                        style: TextStyle(fontSize: 15)),
-                    Icon(Icons.camera_alt, size: 22),
-                  ],
+              GestureDetector(
+                onTap: () async {
+                  final ImageSource? source = await showDialog<ImageSource>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Select Image Source'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.camera_alt),
+                            title: const Text('Camera'),
+                            onTap: () =>
+                                Navigator.pop(context, ImageSource.camera),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.photo_library),
+                            title: const Text('Gallery'),
+                            onTap: () =>
+                                Navigator.pop(context, ImageSource.gallery),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+
+                  if (source != null) {
+                    final XFile? image =
+                        await _imagePicker.pickImage(source: source);
+                    if (image != null) {
+                      setState(() {
+                        _certificatePhoto = File(image.path);
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.black54),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _certificatePhoto != null
+                            ? _certificatePhoto!.path.split('/').last
+                            : "Choose File  No file chosen",
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                      const Icon(Icons.camera_alt, size: 22),
+                    ],
+                  ),
                 ),
               ),
 
@@ -125,24 +181,33 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade800,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 6,
+                  disabledBackgroundColor: Colors.grey,
                 ),
-                onPressed: () {
-                  // TODO: Submit API
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text("Send Application"),
-                    SizedBox(width: 6),
-                    Icon(Icons.arrow_forward),
-                  ],
-                ),
+                onPressed: _isLoading ? null : _submitApplication,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text("Send Application"),
+                          SizedBox(width: 6),
+                          Icon(Icons.arrow_forward),
+                        ],
+                      ),
               ),
             ],
           ),
@@ -170,5 +235,141 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
       suffixIcon: Icon(suffixIcon, size: 22),
       hintText: "",
     );
+  }
+
+  // Get user ID from profile
+  Future<String> _getUserId() async {
+    try {
+      final profileData = await _authService.getUserProfile();
+      final userId = profileData['user']?['id']?.toString() ??
+          profileData['data']?['id']?.toString() ??
+          profileData['id']?.toString();
+
+      if (userId != null) {
+        return userId;
+      }
+      throw Exception('User ID not found');
+    } catch (e) {
+      print("Error getting user ID: $e");
+      rethrow;
+    }
+  }
+
+  // Format date and time to ISO format (2025-10-15T10:00:00)
+  String _formatDateTime(DateTime date, TimeOfDay time) {
+    final dateTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    return dateTime.toIso8601String().split('.')[0]; // Remove milliseconds
+  }
+
+  // Submit application
+  Future<void> _submitApplication() async {
+    // Validate inputs
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select start date and time'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (costController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter expected cost'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final expectedCost = int.tryParse(costController.text.trim());
+    if (expectedCost == null || expectedCost <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid expected cost'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get user ID
+      final userId = await _getUserId();
+
+      // Format datetime to ISO format
+      final startDatetime = _formatDateTime(_selectedDate!, _selectedTime!);
+
+      // For now, send empty string for certificate_photo
+      // TODO: Implement file upload if needed
+      final certificatePhoto = '';
+
+      // Submit application
+      final response = await _authService.submitJobApplication(
+        jobId: widget.jobId,
+        startDatetime: startDatetime,
+        expectedCost: expectedCost,
+        messageToEmployer: messageController.text.trim(),
+        certificatePhoto: certificatePhoto,
+        userId: userId,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                response['message'] ?? 'Application submitted successfully'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Navigate back after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pop(context, true); // Return true to indicate success
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    dateController.dispose();
+    costController.dispose();
+    messageController.dispose();
+    super.dispose();
   }
 }

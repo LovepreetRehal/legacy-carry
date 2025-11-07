@@ -1,5 +1,6 @@
 // services/auth_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/create_job_model.dart';
@@ -10,6 +11,9 @@ import '../models/sign_up_request.dart';
 
 class AuthService {
   final String baseUrl = 'https://legacycarry.com/api';
+
+  // Getter for base URL without /api suffix (for asset URLs)
+  String get baseUrlWithoutApi => baseUrl.replaceAll('/api', '');
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -33,9 +37,13 @@ class AuthService {
       if (json['status'] == true) {
         final loginResponse = LoginResponse.fromJson(json);
 
-        // Save token to SharedPreferences
+        // Save token and role to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', loginResponse.token);
+        await prefs.setString(
+            'user_role', loginResponse.user.role.toLowerCase());
+        print("Token  ${loginResponse.token}");
+        print(" Role  ${loginResponse.user.role}");
 
         return loginResponse;
       } else {
@@ -70,8 +78,82 @@ class AuthService {
     }
   }
 
+  /// Employee Signup API
+  Future<Map<String, dynamic>> signUpEmployee(SignUpRequest request) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/users'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    print("Employee SignUp response -> ${response.body}");
+
+    final json = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (json['status'] == true) {
+        // Save token if provided in response
+        if (json['token'] != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', json['token']);
+          if (json['user'] != null && json['user']['role'] != null) {
+            await prefs.setString(
+                'user_role', json['user']['role'].toString().toLowerCase());
+          }
+        }
+        return json;
+      } else {
+        // Handle validation errors
+        final errorMessage = _extractValidationErrors(json);
+        throw Exception(errorMessage);
+      }
+    } else {
+      // Handle validation errors for non-200/201 status codes
+      final errorMessage = _extractValidationErrors(json);
+      throw Exception(errorMessage);
+    }
+  }
+
+  /// Extract validation errors from API response
+  String _extractValidationErrors(Map<String, dynamic> json) {
+    if (json['errors'] != null && json['errors'] is Map) {
+      final errors = json['errors'] as Map<String, dynamic>;
+      final errorMessages = <String>[];
+
+      errors.forEach((field, messages) {
+        if (messages is List) {
+          for (var message in messages) {
+            errorMessages.add('${_formatFieldName(field)}: $message');
+          }
+        } else if (messages is String) {
+          errorMessages.add('${_formatFieldName(field)}: $messages');
+        }
+      });
+
+      if (errorMessages.isNotEmpty) {
+        return errorMessages.join('\n');
+      }
+    }
+
+    // Fallback to message if no errors object
+    return json['message'] ?? 'Employee signup failed';
+  }
+
+  /// Format field name for display (e.g., "phone" -> "Phone")
+  String _formatFieldName(String field) {
+    // Convert snake_case to Title Case
+    return field
+        .split('_')
+        .map((word) => word.isEmpty
+            ? ''
+            : word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .join(' ');
+  }
+
   Future<CreateJobResponse> createJob(CreateJobRequest jobData) async {
-    final url = Uri.parse('$baseUrl/jobs/create'); // ✅ ensure correct endpoint
+    final url = Uri.parse('$baseUrl/jobs/create'); 
 
     try {
       final response = await http.post(
@@ -84,25 +166,25 @@ class AuthService {
         body: jsonEncode(jobData.toJson()),
       );
 
-      print("📡 URL: $url");
-      print("📤 Body: ${jobData.toJson()}");
-      print("📡 Status Code: ${response.statusCode}");
-      print("📥 Response Body: ${response.body}");
+      print(" URL: $url");
+      print(" Body: ${jobData.toJson()}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
 
       // Decode JSON safely
       final jsonData = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // ✅ Success response
+        // Success response
         return CreateJobResponse.fromJson(jsonData);
       } else {
-        // ❌ API returned error JSON
+        //  API returned error JSON
         final errorMessage = jsonData['message'] ??
             'Failed to create job. Unknown server error.';
         throw Exception(errorMessage);
       }
     } catch (e, stack) {
-      print("❌ Exception while creating job: $e");
+      print(" Exception while creating job: $e");
       print(stack);
       throw Exception("Error creating job: $e");
     }
@@ -462,6 +544,108 @@ class AuthService {
     }
   }
 
+  /// Get Employee Active Jobs
+  // TODO: Update endpoint URL when employee API endpoint is available
+  Future<List<dynamic>> getEmployeeActiveJobs() async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.get(
+      Uri.parse(
+          '$baseUrl/employee/jobs/active'), // TODO: Update with actual endpoint
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print("getEmployeeActiveJobs response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map && jsonData['data'] is Map) {
+        return jsonData['data'].values.toList();
+      } else if (jsonData is Map && jsonData['data'] is List) {
+        return jsonData['data'];
+      } else if (jsonData is List) {
+        return jsonData;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  /// Get Employee Draft Jobs
+  // TODO: Update endpoint URL when employee API endpoint is available
+  Future<List<dynamic>> getEmployeeDraftJobs() async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.get(
+      Uri.parse(
+          '$baseUrl/employee/jobs/draft'), // TODO: Update with actual endpoint
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print("getEmployeeDraftJobs response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map && jsonData['data'] is Map) {
+        return jsonData['data'].values.toList();
+      } else if (jsonData is Map && jsonData['data'] is List) {
+        return jsonData['data'];
+      } else if (jsonData is List) {
+        return jsonData;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  /// Get Employee Hourly Jobs
+  // TODO: Update endpoint URL when employee API endpoint is available
+  Future<List<dynamic>> getEmployeeHourlyJobs() async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.get(
+      Uri.parse(
+          '$baseUrl/employee/jobs/hourly'), // TODO: Update with actual endpoint
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print("getEmployeeHourlyJobs response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map && jsonData['data'] is Map) {
+        return jsonData['data'].values.toList();
+      } else if (jsonData is Map && jsonData['data'] is List) {
+        return jsonData['data'];
+      } else if (jsonData is List) {
+        return jsonData;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
   /// Delete Job
   Future<Map<String, dynamic>> deleteJob(String jobId) async {
     final token = await getToken();
@@ -527,9 +711,337 @@ class AuthService {
         throw Exception(errorMessage);
       }
     } catch (e, stack) {
-      print("❌ Exception while updating job: $e");
+      print(" Exception while updating job: $e");
       print(stack);
       throw Exception("Error updating job: $e");
+    }
+  }
+
+  /// Report Bug/Problem
+  Future<Map<String, dynamic>> reportBug({
+    required int userId,
+    required String reportType,
+    required String description,
+    required String email,
+  }) async {
+    final url = Uri.parse('$baseUrl/reports');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'user_id': userId,
+          'report_type': reportType,
+          'description': description,
+          'email': email,
+        }),
+      );
+
+      print(" URL: $url");
+      print(
+          " Body: {user_id: $userId, report_type: $reportType, description: $description, email: $email}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonResponse;
+      } else {
+        final errorMessage =
+            jsonResponse['message'] ?? 'Failed to submit report. Server error.';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while reporting bug: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Upload Document
+  Future<Map<String, dynamic>> uploadDocument({
+    required int userId,
+    required String documentType,
+    required File file,
+  }) async {
+    final url = Uri.parse('$baseUrl/user-documents/upload');
+
+    try {
+      // Create multipart request
+      var request = http.MultipartRequest('POST', url);
+
+      // Add fields
+      request.fields['user_id'] = userId.toString();
+      request.fields['document_type'] = documentType;
+
+      // Add file
+      var multipartFile = await http.MultipartFile.fromPath(
+        'file',
+        file.path,
+      );
+      request.files.add(multipartFile);
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print(" URL: $url");
+      print(" User ID: $userId");
+      print(" Document Type: $documentType");
+      print(" File Path: ${file.path}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonResponse;
+      } else {
+        final errorMessage = jsonResponse['message'] ??
+            'Failed to upload document. Server error.';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while uploading document: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Submit Job Application
+  Future<Map<String, dynamic>> submitJobApplication({
+    required String jobId,
+    required String startDatetime,
+    required int expectedCost,
+    required String messageToEmployer,
+    String certificatePhoto = '',
+    required String userId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/submit-job-application');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'job_id': jobId,
+          'start_datetime': startDatetime,
+          'expected_cost': expectedCost,
+          'message_to_employer': messageToEmployer,
+          'certificate_photo': certificatePhoto,
+          'user_id': userId,
+        }),
+      );
+
+      print(" Submit Job Application URL: $url");
+      print(" Request Body: ${jsonEncode({
+            'job_id': jobId,
+            'start_datetime': startDatetime,
+            'expected_cost': expectedCost,
+            'message_to_employer': messageToEmployer,
+            'certificate_photo': certificatePhoto,
+            'user_id': userId,
+          })}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (jsonResponse['status'] == true) {
+          return jsonResponse;
+        } else {
+          throw Exception(
+              jsonResponse['message'] ?? 'Failed to submit application');
+        }
+      } else {
+        final errorMessage = jsonResponse['message'] ??
+            'Failed to submit application. Server error: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while submitting job application: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Get FAQs
+  Future<List<dynamic>> getFAQs() async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/settings/faqs');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(" Get FAQs URL: $url");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+
+        // Handle different response formats
+        if (jsonResponse is List) {
+          return jsonResponse;
+        } else if (jsonResponse is Map && jsonResponse['data'] is List) {
+          return jsonResponse['data'];
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e, stack) {
+      print(" Exception while fetching FAQs: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Logout API
+  Future<Map<String, dynamic>> logout() async {
+    final token = await getToken();
+    if (token == null) {
+      // If no token, just return success since user is already logged out locally
+      return {'status': true, 'message': 'Already logged out'};
+    }
+
+    final url = Uri.parse('$baseUrl/logout');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(" Logout URL: $url");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      // Clear token from SharedPreferences regardless of response
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('user_role');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonResponse;
+      } else {
+        // Even if API fails, we've cleared local data, so return success
+        return {
+          'status': true,
+          'message': jsonResponse['message'] ?? 'Logged out locally'
+        };
+      }
+    } catch (e, stack) {
+      print(" Exception while logging out: $e");
+      print(stack);
+
+      // Clear token from SharedPreferences even if API call fails
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('auth_token');
+        await prefs.remove('user_role');
+      } catch (_) {
+        // Ignore errors when clearing preferences
+      }
+
+      // Return success since we've cleared local data
+      return {
+        'status': true,
+        'message': 'Logged out locally (API call failed)'
+      };
+    }
+  }
+
+  /// Update User Profile
+  Future<Map<String, dynamic>> updateUserProfile({
+    required int userId,
+    required String name,
+    required String email,
+    required String phone,
+    File? avatar,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/user/$userId/update');
+
+    try {
+      // Create multipart request
+      var request = http.MultipartRequest('POST', url);
+
+      // Add headers
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      // Add form fields
+      request.fields['name'] = name;
+      request.fields['email'] = email;
+      request.fields['phone'] = phone;
+
+      // Add avatar file if provided
+      if (avatar != null) {
+        var multipartFile = await http.MultipartFile.fromPath(
+          'avatar',
+          avatar.path,
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print(" Update User Profile URL: $url");
+      print(" User ID: $userId");
+      print(" Name: $name");
+      print(" Email: $email");
+      print(" Phone: $phone");
+      print(" Avatar: ${avatar != null ? avatar.path : 'Not provided'}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonResponse;
+      } else {
+        final errorMessage = jsonResponse['message'] ??
+            'Failed to update profile. Server error: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while updating user profile: $e");
+      print(stack);
+      rethrow;
     }
   }
 }

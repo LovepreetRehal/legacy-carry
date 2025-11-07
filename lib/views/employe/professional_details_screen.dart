@@ -32,13 +32,14 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
   TextEditingController rateController = TextEditingController(text: "700");
   String availability = "Full - Time";
   TextEditingController aboutController = TextEditingController();
+  List<String> selectedServices = [];
 
   final services = [
-    {"icon": Icons.plumbing, "label": "Plumber"},
+    {"icon": Icons.plumbing, "label": "Plumbing"},
     {"icon": Icons.format_paint, "label": "Painting"},
-    {"icon": Icons.electrical_services, "label": "Electrician"},
+    {"icon": Icons.electrical_services, "label": "Electrical"},
     {"icon": Icons.handyman, "label": "Carpentry"},
-    {"icon": Icons.add_circle, "label": "Custom"},
+    {"icon": Icons.construction, "label": "Construction"},
   ];
 
   @override
@@ -152,32 +153,80 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                         const SizedBox(height: 16),
 
                         // Services Grid
+                        const Text(
+                          "Select Services*",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: services.map((s) {
+                              final serviceLabel = s["label"] as String;
+                              final isSelected =
+                                  selectedServices.contains(serviceLabel);
                               return Padding(
-                                padding: const EdgeInsets.only(right: 20),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 30,
-                                      backgroundColor: Colors.grey.shade200,
-                                      child: Icon(
-                                        s["icon"] as IconData,
-                                        size: 30,
-                                        color: Colors.black,
+                                padding: const EdgeInsets.only(right: 12),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        selectedServices.remove(serviceLabel);
+                                      } else {
+                                        selectedServices.add(serviceLabel);
+                                      }
+                                    });
+                                  },
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 30,
+                                        backgroundColor: isSelected
+                                            ? Colors.green
+                                            : Colors.grey.shade200,
+                                        child: Icon(
+                                          s["icon"] as IconData,
+                                          size: 30,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(s["label"] as String),
-                                  ],
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        serviceLabel,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isSelected
+                                              ? Colors.green
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }).toList(),
                           ),
                         ),
+                        if (selectedServices.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              "Please select at least one service",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 20),
 
                         // Slider
@@ -266,6 +315,27 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          if (selectedServices.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text("Please select at least one service"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (experience == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Please select experience level"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           print("=== Personal Details ===");
                           print("Name: ${widget.name}");
                           print("Email: ${widget.email}");
@@ -280,6 +350,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                           print("Hourly Rate: ${rateController.text}");
                           print("Availability: $availability");
                           print("About: ${aboutController.text}");
+                          print("Services: $selectedServices");
 
                           final userData = UserData(
                             name: widget.name,
@@ -293,6 +364,7 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                             rate: rateController.text,
                             availability: availability,
                             about: aboutController.text,
+                            services: selectedServices,
                           );
 
                           Navigator.push(

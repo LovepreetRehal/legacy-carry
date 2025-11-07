@@ -10,6 +10,7 @@ class UserData {
   String? rate;
   String? availability;
   String? about;
+  List<String>? services;
 
   UserData({
     required this.name,
@@ -23,6 +24,7 @@ class UserData {
     this.rate,
     this.availability,
     this.about,
+    this.services,
   });
 
   Map<String, dynamic> toJson() {
@@ -38,6 +40,7 @@ class UserData {
       "rate": rate,
       "availability": availability,
       "about": about,
+      "services": services,
     };
   }
 }

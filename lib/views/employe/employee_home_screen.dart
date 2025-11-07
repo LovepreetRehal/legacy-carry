@@ -1,101 +1,174 @@
 import 'package:flutter/material.dart';
-
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:legacy_carry/views/resident/post_a_job_one.dart';
+import 'package:legacy_carry/views/viewmodels/get_job_viewmodel.dart';
+import 'job_detail_screen.dart';
 
 class EmployeeHomeScreen extends StatelessWidget {
   const EmployeeHomeScreen({super.key});
- 
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return ChangeNotifierProvider(
+      create: (_) => GetJobViewmodel()..fetchDashboardData(),
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Bar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Hello Ramesh 👋",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none,
-                          color: Colors.black),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+          child: SafeArea(
+            child: Consumer<GetJobViewmodel>(
+              builder: (context, vm, _) {
+                // Filter jobs with status "active"
+                final activeJobs = vm.jobData.where((job) {
+                  final jobMap = job as Map<String, dynamic>;
+                  final status = jobMap['status']?.toString().toLowerCase();
+                  return status == 'active';
+                }).toList();
 
-                // Top Cards Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildInfoCard("Active Jobs", "26"),
-                    _buildInfoCard("Applicants", "09"),
-                    _buildInfoCard("Upcoming Shifts", "01"),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.post_add,
-                      label: "Post Job",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PostAJobOne(),
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top Bar
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Hello Ramesh 👋",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    _buildActionButton(
-                        icon: Icons.search, label: "Find Labor", onTap: () {}),
-                    _buildActionButton(
-                        icon: Icons.message, label: "Messages", onTap: () {}),
-                    _buildActionButton(
-                        icon: Icons.payment, label: "Payments", onTap: () {}),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                          IconButton(
+                            icon: const Icon(Icons.notifications_none,
+                                color: Colors.black),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                // Recent Applicants
-                const Text(
-                  "Recent Applicants:",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                      // Top Cards Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildInfoCard(
+                              "Active Jobs", activeJobs.length.toString()),
+                          _buildInfoCard("Applicants", "09"),
+                          _buildInfoCard("Upcoming Shifts", "01"),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Action Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildActionButton(
+                            icon: Icons.post_add,
+                            label: "Post Job",
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PostAJobOne(),
+                                ),
+                              );
+                            },
+                          ),
+                          _buildActionButton(
+                              icon: Icons.search,
+                              label: "Find Labor",
+                              onTap: () {}),
+                          _buildActionButton(
+                              icon: Icons.message,
+                              label: "Messages",
+                              onTap: () {}),
+                          _buildActionButton(
+                              icon: Icons.payment,
+                              label: "Payments",
+                              onTap: () {}),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Recommended Jobs
+                      const Text(
+                        "Recommended Jobs:",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Loading State
+                      if (vm.status == GetJobStatus.loading)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      // Error State
+                      else if (vm.status == GetJobStatus.error)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Column(
+                              children: [
+                                Text(
+                                  "Error: ${vm.errorMessage}",
+                                  style: const TextStyle(color: Colors.red),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () => vm.fetchDashboardData(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                  ),
+                                  child: const Text("Retry"),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      // Empty State
+                      else if (activeJobs.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: Text(
+                              "No active jobs available",
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        )
+                      // Jobs List
+                      else
+                        ...activeJobs.take(5).map((job) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildJobCardFromData(
+                              context: context,
+                              job: job as Map<String, dynamic>,
+                            ),
+                          );
+                        }).toList(),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                _buildApplicantCard("Vikas", "Electrician", Icons.electric_bolt),
-                _buildApplicantCard("Rahul", "Plumber", Icons.plumbing),
-                _buildApplicantCard("Sunita", "Cook", Icons.restaurant),
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -113,7 +186,8 @@ class EmployeeHomeScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+            BoxShadow(
+                color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -157,7 +231,8 @@ class EmployeeHomeScreen extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
               ],
             ),
             padding: const EdgeInsets.all(10),
@@ -173,70 +248,155 @@ class EmployeeHomeScreen extends StatelessWidget {
     );
   }
 
-  // Applicant Card Widget
-  Widget _buildApplicantCard(String name, String jobTitle, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.blueAccent, size: 28),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    jobTitle,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  // Job Card Widget from API Data
+  Widget _buildJobCardFromData({
+    required BuildContext context,
+    required Map<String, dynamic> job,
+  }) {
+    // Extract data from job
+    final String jobTitle =
+        job['job_title']?.toString() ?? job['title']?.toString() ?? 'Job Title';
+    final String employerName = job['user']?['name']?.toString() ??
+        job['employer_name']?.toString() ??
+        job['posted_by']?.toString() ??
+        'Employer';
+    final String date = _formatDate(job['start_date'] ?? job['created_at']);
+    final String payAmount = job['pay_amount']?.toString() ?? '0';
+    final String payType =
+        _formatPayType(job['pay_type']?.toString() ?? 'per_day');
+    final String pay = '₹$payAmount / $payType';
+    final String location = job['location']?.toString() ??
+        job['job_location']?.toString() ??
+        'Location not specified';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => JobDetailScreen(jobData: job),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              jobTitle,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            onPressed: () {},
-            child: const Text("View"),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.person, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    employerName,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Colors.redAccent),
+                const SizedBox(width: 6),
+                Text(date),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.attach_money, size: 16, color: Colors.orange),
+                const SizedBox(width: 6),
+                Text(pay),
+                const Spacer(),
+                const Icon(Icons.location_on, size: 16, color: Colors.pink),
+                const SizedBox(width: 6),
+                Text(location),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => JobDetailScreen(jobData: job),
+                    ),
+                  );
+                },
+                child: const Text("APPLY"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return 'Date not available';
+
+    try {
+      String dateStr = dateValue.toString();
+      DateTime date = DateTime.parse(dateStr);
+
+      List<String> months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+
+      String day = date.day.toString();
+      String month = months[date.month - 1];
+      String year = date.year.toString();
+
+      return '$day $month $year';
+    } catch (e) {
+      return dateValue.toString();
+    }
+  }
+
+  String _formatPayType(String payType) {
+    switch (payType.toLowerCase()) {
+      case 'per_day':
+      case 'per day':
+        return 'Day';
+      case 'per_hour':
+      case 'per hour':
+        return 'Hour';
+      case 'fixed':
+        return 'Fixed';
+      default:
+        return payType;
+    }
+  }
 }
-
-
-
-
-
-
-
-
-
 
 /*
 

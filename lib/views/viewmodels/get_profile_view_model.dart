@@ -35,6 +35,15 @@ class GetProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update profile data from API response (useful after update operations)
+  void updateProfileData(Map<String, dynamic>? data) {
+    if (data != null) {
+      _profileData = data;
+      _status = ProfileStatus.success;
+      notifyListeners();
+    }
+  }
+
   /// Optional: Reset the state
   void reset() {
     _status = ProfileStatus.idle;
