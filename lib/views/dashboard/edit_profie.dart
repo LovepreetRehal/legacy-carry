@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/get_profile_view_model.dart';
 import '../services/auth_service.dart';
+import '../providers/user_profile_provider.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
@@ -183,10 +184,19 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           'user': updatedUser,
         };
         profileVM.updateProfileData(updatedProfileData);
+        context
+            .read<UserProfileProvider>()
+            .updateProfileData(updatedProfileData);
       }
 
       // Refresh profile data to get updated avatar URL (in case response didn't have it)
       await profileVM.fetchProfile();
+
+      if (mounted && profileVM.profileData != null) {
+        context
+            .read<UserProfileProvider>()
+            .updateProfileData(profileVM.profileData);
+      }
 
       // Debug: Print avatar URL after refresh
       final refreshedUser = profileVM.profileData?['user'];
@@ -209,9 +219,9 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         // Small delay to ensure avatar is visible before navigating back
         await Future.delayed(const Duration(milliseconds: 500));
 
-        if (mounted) {
-          // Navigate back after successful update
-          Navigator.pop(context);
+        if (mounted && Navigator.of(context).canPop()) {
+          // Navigate back after successful update when possible
+          Navigator.of(context).pop();
         }
       }
     } catch (e) {
@@ -385,21 +395,25 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                                 print(
                                     "🖼️ Avatar URL: $existingAvatarUrl"); // Debug print
 
+                                final ImageProvider? avatarImage =
+                                    _image != null
+                                        ? FileImage(File(_image!.path))
+                                        : (existingAvatarUrl != null &&
+                                                existingAvatarUrl.isNotEmpty)
+                                            ? NetworkImage(existingAvatarUrl)
+                                            : null;
+
                                 return CircleAvatar(
                                   radius: 40,
                                   backgroundColor: Colors.white,
-                                  backgroundImage: _image != null
-                                      ? FileImage(File(_image!.path))
-                                      : (existingAvatarUrl != null &&
-                                              existingAvatarUrl.isNotEmpty)
-                                          ? NetworkImage(existingAvatarUrl)
-                                              as ImageProvider
-                                          : null,
-                                  onBackgroundImageError:
-                                      (exception, stackTrace) {
-                                    print("❌ Error loading avatar: $exception");
-                                    print("URL was: $existingAvatarUrl");
-                                  },
+                                  backgroundImage: avatarImage,
+                                  onBackgroundImageError: avatarImage != null
+                                      ? (exception, stackTrace) {
+                                          print(
+                                              "❌ Error loading avatar: $exception");
+                                          print("URL was: $existingAvatarUrl");
+                                        }
+                                      : null,
                                   child: _image == null &&
                                           (existingAvatarUrl == null ||
                                               existingAvatarUrl.isEmpty)

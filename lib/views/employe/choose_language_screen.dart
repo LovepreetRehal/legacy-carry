@@ -84,7 +84,9 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                         child: Container(
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : Colors.white.withOpacity(0.3),
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
@@ -129,7 +131,6 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                           ),
                         ),
                       );
-
                     },
                     child: const Text(
                       "Next",
@@ -149,4 +150,3 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
     );
   }
 }
-

@@ -1,55 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:legacy_carry/views/resident/payments_screen.dart';
 import 'package:legacy_carry/views/resident/post_a_job_one.dart';
-import '../services/auth_service.dart';
+import '../providers/user_profile_provider.dart';
 
-class ResidentHomeScreen extends StatefulWidget {
+class ResidentHomeScreen extends StatelessWidget {
   const ResidentHomeScreen({super.key});
 
-  @override
-  State<ResidentHomeScreen> createState() => _ResidentHomeScreenState();
-}
-
-class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
-  final AuthService _authService = AuthService();
-  String userName = 'User';
-  bool isLoading = true;
-
-  final List<Map<String, String>> recentApplicants = const [
+  static const List<Map<String, String>> recentApplicants = [
     {"name": "Vikas", "job": "Electrician", "emoji": "🔌"},
     {"name": "Rahul", "job": "Plumber", "emoji": "🚰"},
     {"name": "Sunita", "job": "Cook", "emoji": "🍳"},
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserProfile();
-  }
-
-  Future<void> _loadUserProfile() async {
-    try {
-      final profileData = await _authService.getUserProfile();
-      if (mounted) {
-        setState(() {
-          // Extract name from user object
-          userName = profileData['user']?['name']?.toString() ??
-              profileData['data']?['name']?.toString() ??
-              profileData['name']?.toString() ??
-              'User';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading user profile: $e');
-      if (mounted) {
-        setState(() {
-          userName = 'User';
-          isLoading = false;
-        });
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,21 +39,20 @@ class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    isLoading
-                        ? const Text(
-                            "Hello 👋",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : Text(
-                            "Hello $userName 👋",
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    Consumer<UserProfileProvider>(
+                      builder: (context, profileProvider, _) {
+                        final greeting = profileProvider.isLoading
+                            ? "Hello 👋"
+                            : "Hello ${profileProvider.userName} 👋";
+                        return Text(
+                          greeting,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
+                        );
+                      },
+                    ),
                     const Icon(Icons.notifications_none),
                   ],
                 ),
@@ -216,17 +177,14 @@ class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
                   builder: (context) => const PostAJobOne(),
                 ),
               );
-            } 
-            else if (label == "Payments") {
+            } else if (label == "Payments") {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const PaymentsScreen(),
                 ),
               );
-            }
-            
-            else {
+            } else {
               // Placeholder: You can implement navigation for other buttons as desired
             }
           },

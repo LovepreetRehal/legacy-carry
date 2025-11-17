@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 import 'package:legacy_carry/views/viewmodels/get_job_viewmodel.dart';
+import 'package:legacy_carry/views/providers/user_profile_provider.dart';
 import 'job_detail_screen.dart';
 
 class EmployeeHomeScreen extends StatelessWidget {
@@ -39,13 +39,20 @@ class EmployeeHomeScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Hello Ramesh 👋",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                          Consumer<UserProfileProvider>(
+                            builder: (context, profileProvider, _) {
+                              final greeting = profileProvider.isLoading
+                                  ? "Hello 👋"
+                                  : "Hello ${profileProvider.userName} 👋";
+                              return Text(
+                                greeting,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              );
+                            },
                           ),
                           IconButton(
                             icon: const Icon(Icons.notifications_none,
@@ -72,18 +79,18 @@ class EmployeeHomeScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildActionButton(
-                            icon: Icons.post_add,
-                            label: "Post Job",
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const PostAJobOne(),
-                                ),
-                              );
-                            },
-                          ),
+                          // _buildActionButton(
+                          //   icon: Icons.post_add,
+                          //   label: "Post Job",
+                          //   onTap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => const PostAJobOne(),
+                          //       ),
+                          //     );
+                          //   },
+                          // ),
                           _buildActionButton(
                               icon: Icons.search,
                               label: "Find Labor",

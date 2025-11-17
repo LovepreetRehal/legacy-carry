@@ -153,7 +153,7 @@ class AuthService {
   }
 
   Future<CreateJobResponse> createJob(CreateJobRequest jobData) async {
-    final url = Uri.parse('$baseUrl/jobs/create'); 
+    final url = Uri.parse('$baseUrl/jobs/create');
 
     try {
       final response = await http.post(
@@ -1040,6 +1040,54 @@ class AuthService {
       }
     } catch (e, stack) {
       print(" Exception while updating user profile: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Update Language & Region
+  Future<Map<String, dynamic>> updateLanguageRegion({
+    required int userId,
+    required String language,
+    required String region,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/user/$userId/language-region');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'language': language,
+          'region': region,
+        }),
+      );
+
+      print(" Update Language & Region URL: $url");
+      print(" User ID: $userId");
+      print(" Language: $language");
+      print(" Region: $region");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonResponse;
+      } else {
+        final errorMessage = jsonResponse['message'] ??
+            'Failed to update language & region. Server error: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while updating language & region: $e");
       print(stack);
       rethrow;
     }

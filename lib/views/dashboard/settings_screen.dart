@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/change_language.dart';
 import 'package:legacy_carry/views/change_password_screen.dart';
 import 'package:legacy_carry/views/contact_support_screen.dart';
 import 'package:legacy_carry/views/dashboard/edit_profie.dart';
@@ -74,7 +75,13 @@ class SettingsScreen extends StatelessWidget {
                     'English(EN)',
                     style: TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangeLanguageScreen(),
+                        ));
+                  },
                 ),
 
                 const SizedBox(height: 16),
