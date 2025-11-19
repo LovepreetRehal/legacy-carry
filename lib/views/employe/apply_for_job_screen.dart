@@ -161,15 +161,36 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
                     color: Colors.white,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _certificatePhoto != null
-                            ? _certificatePhoto!.path.split('/').last
-                            : "Choose File  No file chosen",
-                        style: const TextStyle(fontSize: 15),
-                      ),
-                      const Icon(Icons.camera_alt, size: 22),
+                      if (_certificatePhoto != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            _certificatePhoto!,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            "Tap to change photo",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const Expanded(
+                          child: Text(
+                            "Choose File  No file chosen",
+                            style: TextStyle(fontSize: 15),
+                          ),
+                        ),
+                        const Icon(Icons.camera_alt, size: 22),
+                      ],
                     ],
                   ),
                 ),

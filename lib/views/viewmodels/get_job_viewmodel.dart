@@ -19,16 +19,11 @@ class GetJobViewmodel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _authService.getDashboardData();
+      final userId = await _fetchUserId();
+      final response =
+          await _authService.getRecommendedJobs(employerId: userId);
 
-      if (response is List) {
-        _jobData = response;
-      }/* else if (response is Map && response['data'] is List) {
-        _jobData = response['data'];
-      }*/ else {
-        _jobData = [];
-        throw Exception('Unexpected response format');
-      }
+      _jobData = response;
 
       _status = GetJobStatus.success;
     } catch (e) {
@@ -38,5 +33,26 @@ class GetJobViewmodel extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  Future<int> _fetchUserId() async {
+    final profile = await _authService.getUserProfile();
+
+    final possibleIds = [
+      if (profile['user'] is Map && profile['user']['id'] != null)
+        profile['user']['id'],
+      if (profile['data'] is Map && profile['data']['id'] != null)
+        profile['data']['id'],
+      profile['id'],
+    ].where((element) => element != null).toList();
+
+    for (final id in possibleIds) {
+      final parsedId = int.tryParse(id.toString());
+      if (parsedId != null && parsedId > 0) {
+        return parsedId;
+      }
+    }
+
+    throw Exception('Unable to determine user ID');
   }
 }

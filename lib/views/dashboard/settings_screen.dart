@@ -11,8 +11,153 @@ import 'package:legacy_carry/views/splace_screen.dart';
 import 'package:legacy_carry/views/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final AuthService _authService = AuthService();
+  late Future<List<dynamic>> _paymentMethodsFuture;
+  int? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _paymentMethodsFuture = _fetchPaymentMethods();
+  }
+
+  Future<List<dynamic>> _fetchPaymentMethods() async {
+    try {
+      final profile = await _authService.getUserProfile();
+      final userId = _extractUserId(profile);
+      if (userId == null) {
+        throw Exception('Unable to determine user information');
+      }
+      _currentUserId = userId;
+      return await _authService.getPaymentMethods(userId: userId);
+    } catch (e) {
+      debugPrint('Error fetching payment methods: $e');
+      rethrow;
+    }
+  }
+
+  void _refreshPaymentMethods() {
+    setState(() {
+      _paymentMethodsFuture = _fetchPaymentMethods();
+    });
+  }
+
+  int? _extractUserId(Map<String, dynamic> profile) {
+    final candidate =
+        profile['user']?['id'] ?? profile['data']?['id'] ?? profile['id'];
+    if (candidate == null) return null;
+    return int.tryParse(candidate.toString());
+  }
+
+  Map<String, dynamic>? _toMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _getPrimaryMethod(List<dynamic> methods) {
+    for (final method in methods) {
+      final mapped = _toMap(method);
+      if (mapped != null && mapped['is_primary'] == true) {
+        return mapped;
+      }
+    }
+    return methods.isNotEmpty ? _toMap(methods.first) : null;
+  }
+
+  Color _statusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'verified':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      default:
+        return Colors.redAccent;
+    }
+  }
+
+  String _buildDetailsText(Map<String, dynamic>? method) {
+    if (method == null) return 'Details unavailable';
+    final masked = method['masked']?.toString();
+    final details = method['details'];
+
+    if (details is Map && details.isNotEmpty) {
+      return details.entries
+          .map((entry) => '${entry.key}: ${entry.value}')
+          .join('\n');
+    }
+
+    if (masked != null && masked.isNotEmpty) {
+      return masked;
+    }
+    return 'Details unavailable';
+  }
+
+  Widget _buildAdditionalMethodCard(
+    Map<String, dynamic> method, {
+    required VoidCallback onEdit,
+  }) {
+    final provider = method['provider']?.toString() ?? 'Unknown provider';
+    final methodType = method['method_type']?.toString().toUpperCase() ?? '';
+    final verificationStatus =
+        method['verification_status']?.toString() ?? 'unverified';
+    final detailText = _buildDetailsText(method);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$provider — $methodType',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detailText,
+            style: const TextStyle(fontSize: 11),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Status: ${verificationStatus.toUpperCase()}',
+            style: TextStyle(
+              fontSize: 11,
+              color: _statusColor(verificationStatus),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onEdit,
+              child: const Text(
+                'Edit',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +246,8 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Payout Method Section
-                // const SectionTitle(title: 'Payout Method'),
-                //_buildPayoutCard(),
+                const SectionTitle(title: 'Payout Method'),
+                _buildPayoutSection(),
 
                 const SizedBox(height: 16),
 
@@ -225,7 +370,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPayoutCard() {
+  Widget _payoutContainer({required Widget child}) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
@@ -234,26 +379,23 @@ class SettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Current Linked Method',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.account_balance, color: Colors.green),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Bank A/C — HDFC ****1234\nSupported: UPI ID, Bank Account, Wallet',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
+      child: child,
+    );
+  }
+
+  Widget _buildPayoutActions({
+    required bool hasLinkedMethod,
+    VoidCallback? onChange,
+    required VoidCallback onAdd,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (hasLinkedMethod)
               ElevatedButton(
-                onPressed: () {},
+                onPressed: onChange,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   padding:
@@ -264,43 +406,493 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 child: const Text('Change', style: TextStyle(fontSize: 12)),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+            if (hasLinkedMethod) const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: onAdd,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('Add New', style: TextStyle(fontSize: 12)),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Linked Bank: Axis Bank ****5678',
-            style: TextStyle(fontSize: 12),
-          ),
-          const SizedBox(height: 6),
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.green,
-              side: const BorderSide(color: Colors.green),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+              child: Text(
+                hasLinkedMethod ? 'Add New' : 'Link Method',
+                style: const TextStyle(fontSize: 12),
               ),
             ),
-            child: const Text('+UPI +Bank Account',
-                style: TextStyle(fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: onAdd,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.green,
+            side: const BorderSide(color: Colors.green),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
           ),
-        ],
-      ),
+          child:
+              const Text('+UPI +Bank Account', style: TextStyle(fontSize: 12)),
+        ),
+      ],
     );
+  }
+
+  Widget _buildPayoutSection() {
+    return FutureBuilder<List<dynamic>>(
+      future: _paymentMethodsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _payoutContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Current Linked Method',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 16),
+                Center(child: CircularProgressIndicator()),
+              ],
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return _payoutContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Current Linked Method',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Unable to load payout methods right now.',
+                  style: TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  snapshot.error.toString(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.redAccent,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildPayoutActions(
+                  hasLinkedMethod: false,
+                  onAdd: () => _showPaymentMethodDialog(),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final methods = snapshot.data ?? [];
+        if (methods.isEmpty) {
+          return _payoutContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'No payout methods linked yet',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Add a payout method to receive your earnings securely.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                _buildPayoutActions(
+                  hasLinkedMethod: false,
+                  onAdd: () => _showPaymentMethodDialog(),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final method = _getPrimaryMethod(methods);
+        final provider = method?['provider']?.toString() ?? 'Unknown provider';
+        final methodType =
+            method?['method_type']?.toString().toUpperCase() ?? 'METHOD';
+        final verificationStatus =
+            method?['verification_status']?.toString() ?? 'unverified';
+        final detailsText = _buildDetailsText(method);
+
+        final normalizedMethods = methods
+            .map(_toMap)
+            .where((value) => value != null)
+            .cast<Map<String, dynamic>>()
+            .toList();
+
+        final otherMethods = normalizedMethods.where((m) {
+          if (method == null) return true;
+          final primaryId = method['id']?.toString();
+          final currentId = m['id']?.toString();
+          if (primaryId != null && currentId != null) {
+            return primaryId != currentId;
+          }
+          return !identical(m, method);
+        }).toList();
+
+        return _payoutContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Current Linked Method',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.account_balance, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$provider — $methodType',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          detailsText,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Status: ${verificationStatus.toUpperCase()}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _statusColor(verificationStatus),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildPayoutActions(
+                hasLinkedMethod: true,
+                onAdd: () => _showPaymentMethodDialog(),
+                onChange: method == null
+                    ? null
+                    : () => _showPaymentMethodDialog(
+                          existingMethod: method,
+                        ),
+              ),
+              if (otherMethods.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Text(
+                  'Other linked methods',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                ...otherMethods.map(
+                  (m) => _buildAdditionalMethodCard(
+                    m,
+                    onEdit: () => _showPaymentMethodDialog(existingMethod: m),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPaymentMethodDialog({Map<String, dynamic>? existingMethod}) {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile still loading. Please try again.'),
+        ),
+      );
+      _refreshPaymentMethods();
+      return;
+    }
+
+    final isEditing = existingMethod != null;
+    final methodDetails = _toMap(existingMethod?['details']) ?? {};
+
+    final providerController = TextEditingController(
+      text: existingMethod?['provider']?.toString() ?? '',
+    );
+    final upiIdController = TextEditingController(
+      text: methodDetails['upi_id']?.toString() ?? '',
+    );
+    final accountNumberController = TextEditingController(
+      text: methodDetails['account_number']?.toString() ?? '',
+    );
+    final ifscController = TextEditingController(
+      text: methodDetails['ifsc']?.toString() ?? '',
+    );
+    final accountHolderController = TextEditingController(
+      text: methodDetails['account_holder']?.toString() ?? '',
+    );
+
+    bool isPrimary = existingMethod?['is_primary'] == true;
+    String methodType =
+        (existingMethod?['method_type'] ?? existingMethod?['type'] ?? 'upi')
+            .toString()
+            .toLowerCase();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    Future<void> closeControllers() async {
+      providerController.dispose();
+      upiIdController.dispose();
+      accountNumberController.dispose();
+      ifscController.dispose();
+      accountHolderController.dispose();
+    }
+
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            Future<void> handleSubmit() async {
+              final provider = providerController.text.trim();
+              if (provider.isEmpty) {
+                setState(() {
+                  errorMessage = 'Provider name is required.';
+                });
+                return;
+              }
+
+              Map<String, dynamic> details;
+              if (methodType == 'upi') {
+                final upiId = upiIdController.text.trim();
+                if (upiId.isEmpty) {
+                  setState(() {
+                    errorMessage = 'UPI ID is required.';
+                  });
+                  return;
+                }
+                details = {'upi_id': upiId};
+              } else {
+                final accountNumber = accountNumberController.text.trim();
+                final ifsc = ifscController.text.trim();
+                if (accountNumber.isEmpty || ifsc.isEmpty) {
+                  setState(() {
+                    errorMessage =
+                        'Account number and IFSC are required for bank accounts.';
+                  });
+                  return;
+                }
+                details = {
+                  'account_number': accountNumber,
+                  'ifsc': ifsc,
+                };
+                final holder = accountHolderController.text.trim();
+                if (holder.isNotEmpty) {
+                  details['account_holder'] = holder;
+                }
+              }
+
+              Future<void> submitFuture() async {
+                setState(() {
+                  errorMessage = null;
+                  isSubmitting = true;
+                });
+
+                try {
+                  if (isEditing) {
+                    final idValue = existingMethod['id'];
+                    final id = idValue == null
+                        ? null
+                        : int.tryParse(idValue.toString());
+                    if (id == null) {
+                      throw Exception('Missing payout method identifier.');
+                    }
+                    await _authService.updatePaymentMethod(
+                      userId: _currentUserId!,
+                      paymentMethodId: id,
+                      methodType: methodType,
+                      details: details,
+                      isPrimary: isPrimary,
+                      provider: provider,
+                    );
+                  } else {
+                    await _authService.addPaymentMethod(
+                      userId: _currentUserId!,
+                      methodType: methodType,
+                      details: details,
+                      isPrimary: isPrimary,
+                      provider: provider,
+                    );
+                  }
+
+                  if (!mounted) return;
+                  Navigator.of(dialogContext).pop(true);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isEditing
+                            ? 'Payout method updated successfully.'
+                            : 'Payout method added successfully.',
+                      ),
+                    ),
+                  );
+                  _refreshPaymentMethods();
+                } catch (e) {
+                  setState(() {
+                    errorMessage = e.toString().replaceFirst('Exception: ', '');
+                    isSubmitting = false;
+                  });
+                }
+              }
+
+              await submitFuture();
+            }
+
+            return AlertDialog(
+              title: Text(
+                  isEditing ? 'Update payout method' : 'Add payout method'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: methodType,
+                      decoration: const InputDecoration(
+                        labelText: 'Method Type',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'upi',
+                          child: Text('UPI'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'bank',
+                          child: Text('Bank Account'),
+                        ),
+                      ],
+                      onChanged: isSubmitting
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              setState(() {
+                                methodType = value;
+                                errorMessage = null;
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: providerController,
+                      enabled: !isSubmitting,
+                      decoration: const InputDecoration(
+                        labelText: 'Provider',
+                        hintText: 'e.g., PhonePe, Paytm',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (methodType == 'upi')
+                      TextField(
+                        controller: upiIdController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'UPI ID',
+                          hintText: 'example@bank',
+                        ),
+                      )
+                    else ...[
+                      TextField(
+                        controller: accountHolderController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Account Holder Name (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: accountNumberController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Account Number',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: ifscController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'IFSC Code',
+                        ),
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Set as primary method'),
+                      value: isPrimary,
+                      onChanged: isSubmitting
+                          ? null
+                          : (value) {
+                              setState(() {
+                                isPrimary = value;
+                              });
+                            },
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting ? null : () => handleSubmit(),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).whenComplete(closeControllers);
   }
 }
 

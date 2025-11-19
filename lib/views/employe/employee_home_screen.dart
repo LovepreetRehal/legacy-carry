@@ -23,10 +23,12 @@ class EmployeeHomeScreen extends StatelessWidget {
           child: SafeArea(
             child: Consumer<GetJobViewmodel>(
               builder: (context, vm, _) {
-                // Filter jobs with status "active"
-                final activeJobs = vm.jobData.where((job) {
-                  final jobMap = job as Map<String, dynamic>;
-                  final status = jobMap['status']?.toString().toLowerCase();
+                final recommendedJobs =
+                    vm.jobData.whereType<Map<String, dynamic>>().toList();
+
+                // Filter jobs with status "active" for the stats card
+                final activeJobs = recommendedJobs.where((job) {
+                  final status = job['status']?.toString().toLowerCase();
                   return status == 'active';
                 }).toList();
 
@@ -69,8 +71,8 @@ class EmployeeHomeScreen extends StatelessWidget {
                         children: [
                           _buildInfoCard(
                               "Active Jobs", activeJobs.length.toString()),
-                          _buildInfoCard("Applicants", "09"),
-                          _buildInfoCard("Upcoming Shifts", "01"),
+                          _buildInfoCard("Applicants", "00"),
+                          _buildInfoCard("Upcoming Shifts", "00"),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -93,7 +95,7 @@ class EmployeeHomeScreen extends StatelessWidget {
                           // ),
                           _buildActionButton(
                               icon: Icons.search,
-                              label: "Find Labor",
+                              label: "Find Jobs",
                               onTap: () {}),
                           _buildActionButton(
                               icon: Icons.message,
@@ -151,24 +153,24 @@ class EmployeeHomeScreen extends StatelessWidget {
                           ),
                         )
                       // Empty State
-                      else if (activeJobs.isEmpty)
+                      else if (recommendedJobs.isEmpty)
                         const Center(
                           child: Padding(
                             padding: EdgeInsets.all(20.0),
                             child: Text(
-                              "No active jobs available",
+                              "No recommended jobs available",
                               style: TextStyle(fontSize: 16),
                             ),
                           ),
                         )
                       // Jobs List
                       else
-                        ...activeJobs.take(5).map((job) {
+                        ...recommendedJobs.take(5).map((job) {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _buildJobCardFromData(
                               context: context,
-                              job: job as Map<String, dynamic>,
+                              job: job,
                             ),
                           );
                         }).toList(),
@@ -277,14 +279,7 @@ class EmployeeHomeScreen extends StatelessWidget {
         'Location not specified';
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => JobDetailScreen(jobData: job),
-          ),
-        );
-      },
+      onTap: () => _openJobDetail(context, job),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -340,14 +335,7 @@ class EmployeeHomeScreen extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => JobDetailScreen(jobData: job),
-                    ),
-                  );
-                },
+                onPressed: () => _openJobDetail(context, job),
                 child: const Text("APPLY"),
               ),
             ),
@@ -355,6 +343,21 @@ class EmployeeHomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openJobDetail(
+      BuildContext context, Map<String, dynamic> job) async {
+    final shouldRefresh = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobDetailScreen(jobData: job),
+      ),
+    );
+
+    if (shouldRefresh == true) {
+      final vm = Provider.of<GetJobViewmodel>(context, listen: false);
+      vm.fetchDashboardData();
+    }
   }
 
   String _formatDate(dynamic dateValue) {

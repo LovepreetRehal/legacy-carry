@@ -451,6 +451,38 @@ class AuthService {
     }
   }
 
+  /// Get recommended jobs for the logged-in employer/employee profile.
+  Future<List<dynamic>> getRecommendedJobs({required int employerId}) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/jobs'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'employer_id': employerId}),
+    );
+
+    print("getRecommendedJobs body -> ${jsonEncode({
+          'employer_id': employerId
+        })}");
+    print("getRecommendedJobs response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map && jsonData['data'] is List) {
+        return List<dynamic>.from(jsonData['data']);
+      } else {
+        throw Exception('Unexpected response format');
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
   /// Get Active Jobs
   Future<List<dynamic>> getActiveJobs() async {
     final token = await getToken();
@@ -538,6 +570,43 @@ class AuthService {
         return jsonData['data'];
       } else {
         return [];
+      }
+    } else {
+      throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> getJobDetails(String jobId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/jobs/$jobId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print("getJobDetails response -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map<String, dynamic>) {
+        final bool isSuccess =
+            jsonData['status'] == true || jsonData['success'] == true;
+        if (!isSuccess) {
+          throw Exception(jsonData['message'] ?? 'Failed to fetch job details');
+        }
+
+        if (jsonData['data'] is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(jsonData['data']);
+        }
+
+        throw Exception('Job details missing in response');
+      } else {
+        throw Exception('Unexpected response format');
       }
     } else {
       throw Exception('Server error: ${response.statusCode}');
@@ -810,6 +879,163 @@ class AuthService {
       print(" Exception while uploading document: $e");
       print(stack);
       rethrow;
+    }
+  }
+
+  /// Get documents uploaded by a user
+  Future<List<dynamic>> getUserDocuments(int userId) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/user-documents/$userId');
+
+    final headers = {
+      'Accept': 'application/json',
+    };
+
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    try {
+      final response = await http.get(url, headers: headers);
+      print(" Get User Documents URL: $url");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+      final bool isSuccess = jsonResponse['status'] == true ||
+          jsonResponse['success'] == true ||
+          response.statusCode == 200;
+
+      if (isSuccess && jsonResponse['data'] is List) {
+        return List<dynamic>.from(jsonResponse['data']);
+      }
+
+      final message =
+          jsonResponse['message'] ?? 'Failed to fetch uploaded documents';
+      throw Exception(message);
+    } catch (e, stackTrace) {
+      print(" Exception while fetching user documents: $e");
+      print(stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getPaymentMethods({required int userId}) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/users/$userId/payment-methods');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print(
+        "getPaymentMethods response (${response.statusCode}) -> ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      if (jsonData is Map<String, dynamic>) {
+        final data = jsonData['data'];
+        if (data is List) {
+          return List<dynamic>.from(data);
+        } else if (data == null) {
+          return [];
+        }
+      } else if (jsonData is List) {
+        return List<dynamic>.from(jsonData);
+      }
+
+      return [];
+    } else {
+      throw Exception(
+          'Failed to fetch payment methods: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> addPaymentMethod({
+    required int userId,
+    required String methodType,
+    required Map<String, dynamic> details,
+    required bool isPrimary,
+    required String provider,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/users/$userId/payment-methods');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'type': methodType,
+        'details': details,
+        'is_primary': isPrimary,
+        'provider': provider,
+      }),
+    );
+
+    print(
+        "addPaymentMethod response (${response.statusCode}) -> ${response.body}");
+
+    final jsonData = jsonDecode(response.body);
+
+    if (response.statusCode == 200 ||
+        response.statusCode == 201 ||
+        jsonData['status'] == true) {
+      return jsonData;
+    } else {
+      final message = jsonData['message'] ?? 'Failed to add payment method';
+      throw Exception(message);
+    }
+  }
+
+  Future<Map<String, dynamic>> updatePaymentMethod({
+    required int userId,
+    required int paymentMethodId,
+    required String methodType,
+    required Map<String, dynamic> details,
+    required bool isPrimary,
+    required String provider,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url =
+        Uri.parse('$baseUrl/users/$userId/payment-methods/$paymentMethodId');
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'type': methodType,
+        'details': details,
+        'is_primary': isPrimary,
+        'provider': provider,
+      }),
+    );
+
+    print(
+        "updatePaymentMethod response (${response.statusCode}) -> ${response.body}");
+
+    final jsonData = jsonDecode(response.body);
+
+    if (response.statusCode == 200 ||
+        response.statusCode == 201 ||
+        jsonData['status'] == true) {
+      return jsonData;
+    } else {
+      final message = jsonData['message'] ?? 'Failed to update payment method';
+      throw Exception(message);
     }
   }
 

@@ -111,36 +111,13 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
 
   Future<void> _pickSelfie() async {
     try {
-      // Show options: Camera or Gallery
-      final ImageSource? source = await showDialog<ImageSource>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Select Selfie Source'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      if (source != null) {
-        final XFile? image = await _imagePicker.pickImage(source: source);
-        if (image != null) {
-          setState(() {
-            _selfieFile = File(image.path);
-          });
-        }
+      // Open camera directly for selfie
+      final XFile? image =
+          await _imagePicker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        setState(() {
+          _selfieFile = File(image.path);
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -407,7 +384,7 @@ class _VerifyScreenContentState extends State<_VerifyScreenContent> {
                                             ],
                                           )
                                         : const Text(
-                                            "Choose File/Image/Camera",
+                                            "Upload Selfie",
                                             style: TextStyle(
                                                 color: Colors.grey,
                                                 fontSize: 14),

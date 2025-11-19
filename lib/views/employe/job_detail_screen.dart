@@ -1,14 +1,74 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import 'apply_for_job_screen.dart';
 
-class JobDetailScreen extends StatelessWidget {
+class JobDetailScreen extends StatefulWidget {
   final Map<String, dynamic> jobData;
 
   const JobDetailScreen({Key? key, required this.jobData}) : super(key: key);
 
   @override
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends State<JobDetailScreen> {
+  final AuthService _authService = AuthService();
+  late Map<String, dynamic> _jobData;
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool _hasApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _jobData = Map<String, dynamic>.from(widget.jobData);
+    _fetchJobDetails();
+  }
+
+  Future<void> _fetchJobDetails() async {
+    final jobId = _extractJobId(_jobData);
+    if (jobId == null) {
+      setState(() {
+        _errorMessage = 'Job ID not available';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _authService.getJobDetails(jobId);
+      if (!mounted) return;
+      setState(() {
+        _jobData = {..._jobData, ...result};
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  String? _extractJobId(Map<String, dynamic> data) {
+    final dynamic idValue = data['id'] ?? data['job_id'];
+    if (idValue == null) return null;
+    final id = idValue.toString();
+    return id.isEmpty ? null : id;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic> jobData = _jobData;
     // Extract data from jobData with fallbacks
     final String jobTitle = jobData['job_title']?.toString() ??
         jobData['title']?.toString() ??
@@ -102,6 +162,9 @@ class JobDetailScreen extends StatelessWidget {
     final bool advancePayment = jobData['advance_payment'] == true ||
         jobData['advance_payment']?.toString().toLowerCase() == 'yes' ||
         jobData['advance_payment'] == 1;
+    final bool isApplied = jobData['applied'] == true ||
+        jobData['applied'] == 1 ||
+        jobData['applied']?.toString().toLowerCase() == 'true';
     final int advanceAmount = parseInt(jobData['advance_amount'], 0);
 
     // Helper function to safely parse double
@@ -138,504 +201,592 @@ class JobDetailScreen extends StatelessWidget {
       duration = jobData['expected_duration'].toString();
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return WillPopScope(
+      onWillPop: () async {
+        _handleScreenPop();
+        return false;
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header with back button and title
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    Expanded(
-                      child: Text(
-                        jobTitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header with back button and title
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon:
+                            const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: _handleScreenPop,
                       ),
-                    ),
-                    const SizedBox(width: 48), // Balance the back button
-                  ],
-                ),
-              ),
-
-              // Content Card
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Employer Section with Contact Button
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.person,
-                              color: Colors.green,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Text(
-                                        'Employer: ',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        employerName,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Colors.green,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                if (employerPhone.isNotEmpty) {
-                                  // TODO: Implement phone call functionality
-                                }
-                              },
-                              icon: const Icon(Icons.phone, size: 16),
-                              label: const Text(
-                                'CONTACT',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[700],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                elevation: 0,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Rating Section
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Color(0xFFF6C945),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 4),
-                            ...List.generate(5, (index) {
-                              return Icon(
-                                Icons.star,
-                                color: index < rating.floor()
-                                    ? const Color(0xFFF6C945)
-                                    : Colors.grey[300],
-                                size: 20,
-                              );
-                            }),
-                            const SizedBox(width: 8),
-                            Text(
-                              '($reviews reviews)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-                        const Divider(color: Colors.grey, thickness: 1),
-                        const SizedBox(height: 20),
-
-                        // Job Details
-                        if (skillsList.isNotEmpty || description.isNotEmpty)
-                          _buildJobDetailRow(
-                            icon: Icons.assignment,
-                            label: 'Tasks/Skills Required: ',
-                            value: tasks,
-                          ),
-                        if (skillsList.isNotEmpty || description.isNotEmpty)
-                          const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.build,
-                          label: 'Tools Provided: ',
-                          value: toolsProvided ? 'Yes' : 'No',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.people,
-                          label: 'Workers Required: ',
-                          value: workersRequired.toString(),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.calendar_today,
-                          label: 'Start Date: ',
-                          value: startDate,
-                        ),
-                        if (endDate != null) ...[
-                          const SizedBox(height: 12),
-                          _buildJobDetailRow(
-                            icon: Icons.event,
-                            label: 'End Date: ',
-                            value: endDate,
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.access_time,
-                          label: 'Shift: ',
-                          value: shift,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.currency_rupee,
-                          label: 'Pay: ',
-                          value: pay,
-                        ),
-                        if (advancePayment && advanceAmount > 0) ...[
-                          const SizedBox(height: 12),
-                          _buildJobDetailRow(
-                            icon: Icons.account_balance_wallet,
-                            label: 'Advance Payment: ',
-                            value: '₹$advanceAmount',
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.hourglass_empty,
-                          label: 'Duration: ',
-                          value: duration,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildJobDetailRow(
-                          icon: Icons.location_on,
-                          label: 'Location: ',
-                          value: location,
-                        ),
-                        if (address.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _buildJobDetailRow(
-                            icon: Icons.home,
-                            label: 'Address: ',
-                            value: address,
-                          ),
-                        ],
-                        if (safetyInstructions.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _buildJobDetailRow(
-                            icon: Icons.security,
-                            label: 'Safety Instructions: ',
-                            value: safetyInstructions,
-                          ),
-                        ],
-                        if (documentsList.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.description,
-                                size: 20,
-                                color: Colors.black54,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Required Documents:',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    ...documentsList.map((doc) => Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 8, top: 2),
-                                          child: Text(
-                                            '• $doc',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        )),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-
-                        const SizedBox(height: 20),
-                        const Divider(color: Colors.grey, thickness: 1),
-                        const SizedBox(height: 20),
-
-                        // Map Section
-                        const Text(
-                          'Location',
-                          style: TextStyle(
-                            fontSize: 16,
+                      Expanded(
+                        child: Text(
+                          jobTitle,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      const SizedBox(width: 48), // Balance the back button
+                    ],
+                  ),
+                ),
+
+                if (_isLoading)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Colors.black12,
+                      color: Colors.green[700],
+                    ),
+                  ),
+
+                if (_errorMessage != null)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: _buildErrorBanner(_errorMessage!),
+                  ),
+
+                // Content Card
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Stack(
-                              children: [
-                                // Placeholder for map - you can replace this with Google Maps widget
-                                Container(
-                                  color: Colors.grey[100],
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.map,
-                                          size: 48,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          location,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                // Map pin indicator
-                                const Center(
-                                  child: Icon(
-                                    Icons.location_on,
-                                    color: Colors.red,
-                                    size: 40,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Action Buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // Get job ID from jobData
-                                  final jobId = jobData['id']?.toString() ??
-                                      jobData['job_id']?.toString() ??
-                                      '';
-                                  if (jobId.isNotEmpty) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ApplyForJobScreen(jobId: jobId),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Job ID not found'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green[800],
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Apply',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Icon(Icons.arrow_forward, size: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Navigate to message screen
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF6C945),
-                                  foregroundColor: Colors.black87,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Flexible(
-                                      child: Text(
-                                        'Message Employer',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.arrow_forward, size: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Safety Note
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.yellow[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.yellow[200]!),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Employer Section with Contact Button
+                          Row(
                             children: [
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.orange[700],
-                                size: 20,
+                              const Icon(
+                                Icons.person,
+                                color: Colors.green,
+                                size: 24,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Safety Note:',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      documentsList.isNotEmpty
-                                          ? 'Always verify employer details before starting work. Required Documents: ${documentsList.join(', ')}'
-                                          : 'Always verify employer details before starting work. Required Documents: ID Proof, Address Proof',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[700],
-                                        height: 1.4,
-                                      ),
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Employer: ',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          employerName,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green,
+                                          size: 16,
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  if (employerPhone.isNotEmpty) {
+                                    // TODO: Implement phone call functionality
+                                  }
+                                },
+                                icon: const Icon(Icons.phone, size: 16),
+                                label: const Text(
+                                  'CONTACT',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green[700],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  elevation: 0,
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                      ],
+
+                          const SizedBox(height: 12),
+
+                          // Rating Section
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Color(0xFFF6C945),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 4),
+                              ...List.generate(5, (index) {
+                                return Icon(
+                                  Icons.star,
+                                  color: index < rating.floor()
+                                      ? const Color(0xFFF6C945)
+                                      : Colors.grey[300],
+                                  size: 20,
+                                );
+                              }),
+                              const SizedBox(width: 8),
+                              Text(
+                                '($reviews reviews)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                          const Divider(color: Colors.grey, thickness: 1),
+                          const SizedBox(height: 20),
+
+                          // Job Details
+                          if (skillsList.isNotEmpty || description.isNotEmpty)
+                            _buildJobDetailRow(
+                              icon: Icons.assignment,
+                              label: 'Tasks/Skills Required: ',
+                              value: tasks,
+                            ),
+                          if (skillsList.isNotEmpty || description.isNotEmpty)
+                            const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.build,
+                            label: 'Tools Provided: ',
+                            value: toolsProvided ? 'Yes' : 'No',
+                          ),
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.people,
+                            label: 'Workers Required: ',
+                            value: workersRequired.toString(),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.calendar_today,
+                            label: 'Start Date: ',
+                            value: startDate,
+                          ),
+                          if (endDate != null) ...[
+                            const SizedBox(height: 12),
+                            _buildJobDetailRow(
+                              icon: Icons.event,
+                              label: 'End Date: ',
+                              value: endDate,
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.access_time,
+                            label: 'Shift: ',
+                            value: shift,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.currency_rupee,
+                            label: 'Pay: ',
+                            value: pay,
+                          ),
+                          if (advancePayment && advanceAmount > 0) ...[
+                            const SizedBox(height: 12),
+                            _buildJobDetailRow(
+                              icon: Icons.account_balance_wallet,
+                              label: 'Advance Payment: ',
+                              value: '₹$advanceAmount',
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.hourglass_empty,
+                            label: 'Duration: ',
+                            value: duration,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildJobDetailRow(
+                            icon: Icons.location_on,
+                            label: 'Location: ',
+                            value: location,
+                          ),
+                          if (address.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildJobDetailRow(
+                              icon: Icons.home,
+                              label: 'Address: ',
+                              value: address,
+                            ),
+                          ],
+                          if (safetyInstructions.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildJobDetailRow(
+                              icon: Icons.security,
+                              label: 'Safety Instructions: ',
+                              value: safetyInstructions,
+                            ),
+                          ],
+                          if (documentsList.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.description,
+                                  size: 20,
+                                  color: Colors.black54,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Required Documents:',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      ...documentsList.map((doc) => Padding(
+                                            padding: const EdgeInsets.only(
+                                                left: 8, top: 2),
+                                            child: Text(
+                                              '• $doc',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          )),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+                          const Divider(color: Colors.grey, thickness: 1),
+                          const SizedBox(height: 20),
+
+                          // Map Section
+                          const Text(
+                            'Location',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Stack(
+                                children: [
+                                  // Placeholder for map - you can replace this with Google Maps widget
+                                  Container(
+                                    color: Colors.grey[100],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.map,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            location,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Map pin indicator
+                                  const Center(
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Action Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isApplied
+                                      ? null
+                                      : () => _handleApplyTap(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isApplied
+                                        ? Colors.grey[400]
+                                        : Colors.green[800],
+                                    foregroundColor: isApplied
+                                        ? Colors.black54
+                                        : Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        isApplied ? 'Already Applied' : 'Apply',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        isApplied
+                                            ? Icons.check_circle_outline
+                                            : Icons.arrow_forward,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    // TODO: Navigate to message screen
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF6C945),
+                                    foregroundColor: Colors.black87,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Flexible(
+                                        child: Text(
+                                          'Message Employer',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.arrow_forward, size: 18),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Safety Note
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.yellow[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.yellow[200]!),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.orange[700],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Safety Note:',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        documentsList.isNotEmpty
+                                            ? 'Always verify employer details before starting work. Required Documents: ${documentsList.join(', ')}'
+                                            : 'Always verify employer details before starting work. Required Documents: ID Proof, Address Proof',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[700],
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleApplyTap() async {
+    final jobId = _extractJobId(_jobData) ?? '';
+    if (jobId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Job ID not found'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ApplyForJobScreen(jobId: jobId),
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {
+        _jobData = {..._jobData, 'applied': true};
+        _hasApplied = true;
+      });
+    }
+  }
+
+  void _handleScreenPop() {
+    Navigator.pop(context, _hasApplied ? true : null);
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 13,
+                height: 1.3,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: _fetchJobDetails,
+            icon: const Icon(Icons.refresh, size: 18),
+            color: Colors.red,
+            tooltip: 'Retry',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }

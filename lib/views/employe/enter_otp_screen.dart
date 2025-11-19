@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../employe/select_type_screen.dart';
 import '../employe/dashboard_screen.dart';
 import '../resident/resident_dashboard_screen.dart';
@@ -18,21 +19,21 @@ class OtpVerificationScreen extends StatefulWidget {
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final List<TextEditingController> otpControllers =
   List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> otpFocusNodes = List.generate(6, (_) => FocusNode());
+  final List<FocusNode> otpFocusNodes =
+  List.generate(6, (_) => FocusNode());
 
   @override
   void dispose() {
-    for (var controller in otpControllers) controller.dispose();
-    for (var node in otpFocusNodes) node.dispose();
+    for (var c in otpControllers) c.dispose();
+    for (var n in otpFocusNodes) n.dispose();
     super.dispose();
   }
 
+  /// Auto move to next or back
   void _onOtpChanged(String value, int index) {
     if (value.isNotEmpty && index < 5) {
-      // Move to next field
       otpFocusNodes[index + 1].requestFocus();
     } else if (value.isEmpty && index > 0) {
-      // Move to previous field on delete/backspace
       otpFocusNodes[index - 1].requestFocus();
     }
   }
@@ -47,30 +48,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         return Scaffold(
           body: Stack(
             children: [
-              // Background
               Positioned.fill(
                 child: Image.asset(
                   'resources/image/bg_leaves.png',
                   fit: BoxFit.cover,
                 ),
               ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withOpacity(0.0),
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.2),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-              // OTP Form
               Center(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -91,6 +75,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                     ],
                   ),
+
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -113,7 +98,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // ✅ OTP Fields
+                      // -------- OTP BOXES -------- //
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: List.generate(6, (index) {
@@ -126,11 +111,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               keyboardType: TextInputType.number,
                               maxLength: 1,
                               style: const TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                               decoration: InputDecoration(
                                 counterText: '',
                                 filled: true,
-                                fillColor: Colors.white.withOpacity(0.9),
+                                fillColor: Colors.white,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide: BorderSide.none,
@@ -141,32 +128,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           );
                         }),
                       ),
-                      const SizedBox(height: 15),
 
-                      // Resend OTP
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            "Resend OTP ",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            "30 sec",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 20),
 
-                      // Verify Button
+                      // -------- VERIFY BUTTON -------- //
                       SizedBox(
                         width: double.infinity,
                         height: 48,
@@ -174,34 +139,48 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           onPressed: otpVM.status == OtpStatus.loading
                               ? null
                               : () async {
-                            final enteredOtp = otpControllers.map((c) => c.text).join();
+                            // Collect OTP
+                            final enteredOtp = otpControllers
+                                .map((c) => c.text.trim())
+                                .join();
 
+                            // Validation
                             if (enteredOtp.length != 6) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("Please enter all 6 digits"),
+                                  content:
+                                  Text("Please enter all 6 digits"),
                                   backgroundColor: Colors.red,
                                 ),
                               );
                               return;
                             }
 
+                            // Call API
                             await otpVM.verifyUserOtp(
                               phone: widget.phoneNumber,
                               otp: enteredOtp,
                             );
 
+                            // SUCCESS
                             if (otpVM.status == OtpStatus.success) {
                               final user = otpVM.otpResponse?['user'];
-                              final role = user?['role']?.toString().toLowerCase();
-                              final token = otpVM.otpResponse?['token'];
+                              final role = user?['role']
+                                  ?.toString()
+                                  .toLowerCase();
+                              final token =
+                              otpVM.otpResponse?['token'];
 
-                              if (token != null && role != null) {
-                                final prefs = await SharedPreferences.getInstance();
-                                await prefs.setString('auth_token', token);
-                                await prefs.setString('user_role', role);
-                                debugPrint("✅ Token saved: $token");
-                                debugPrint("✅ Role saved: $role");
+                              // Save Auth Data
+                              final prefs =
+                              await SharedPreferences.getInstance();
+                              if (token != null) {
+                                await prefs.setString(
+                                    'auth_token', token);
+                              }
+                              if (role != null) {
+                                await prefs.setString(
+                                    'user_role', role);
                               }
 
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -211,32 +190,43 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                 ),
                               );
 
-                              // Navigate based on role
+                              // NAVIGATION
                               if (role == 'customer') {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const ResidentDashboardScreen()),
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const ResidentDashboardScreen(),
+                                  ),
                                 );
                               } else if (role == 'labor') {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const DashboardScreen()), // Example admin screen
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const DashboardScreen(),
+                                  ),
                                 );
                               } else {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                      const SelectTypeScreen()),
+                                    builder: (_) =>
+                                    const SelectTypeScreen(),
+                                  ),
                                 );
                               }
-                            } else if (otpVM.status == OtpStatus.error) {
+                            }
+
+                            // ERROR
+                            else if (otpVM.status ==
+                                OtpStatus.error) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     otpVM.errorMessage.isNotEmpty
                                         ? otpVM.errorMessage
-                                        : "Something went wrong",
+                                        : "Invalid OTP",
                                   ),
                                   backgroundColor: Colors.red,
                                 ),
@@ -257,7 +247,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),

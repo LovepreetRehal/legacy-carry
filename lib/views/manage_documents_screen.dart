@@ -27,6 +27,17 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
   bool addressProofUploaded = false;
   bool verificationPhotoUploaded = false;
 
+  // Track server state
+  bool isFetchingDocuments = false;
+  String? fetchDocumentsError;
+  Map<String, Map<String, dynamic>> uploadedDocumentsByType = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUploadedDocuments();
+  }
+
   // Method to get logged-in user ID
   Future<int> _getUserId() async {
     try {
@@ -166,6 +177,7 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
         }
       });
 
+      await _loadUploadedDocuments(userId: userId);
       _showSuccessDialog('$documentType uploaded successfully!');
     } catch (e) {
       // Reset uploading state on error
@@ -185,6 +197,70 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
       print("Error uploading document: $e");
       _showErrorDialog(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  Future<void> _loadUploadedDocuments({int? userId}) async {
+    if (!mounted) return;
+    setState(() {
+      isFetchingDocuments = true;
+      fetchDocumentsError = null;
+    });
+
+    try {
+      final resolvedUserId = userId ?? await _getUserId();
+      if (resolvedUserId == 0) {
+        throw Exception('Unable to get user information. Please try again.');
+      }
+
+      final documents = await _authService.getUserDocuments(resolvedUserId);
+      final mapped = <String, Map<String, dynamic>>{};
+
+      for (final doc in documents) {
+        final type = doc['document_type']?.toString();
+        if (type != null) {
+          mapped[type] = Map<String, dynamic>.from(doc);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        uploadedDocumentsByType = mapped;
+        idProofUploaded = mapped.containsKey('id_proof');
+        addressProofUploaded = mapped.containsKey('address_proof');
+        verificationPhotoUploaded = mapped.containsKey('verification_photo');
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        fetchDocumentsError =
+            e.toString().replaceFirst('Exception: ', '').trim();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        isFetchingDocuments = false;
+      });
+    }
+  }
+
+  Map<String, dynamic>? _getDocumentDataForTitle(String title) {
+    final type = _getDocumentTypeApiValue(title);
+    return uploadedDocumentsByType[type];
+  }
+
+  String _formatDocumentStatus(String? status) {
+    if (status == null || status.isEmpty) return 'Pending review';
+    return status
+        .split('_')
+        .map((word) =>
+            word.isEmpty ? '' : '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
+  }
+
+  String _extractFileName(String? path) {
+    if (path == null || path.isEmpty) return 'Uploaded document';
+    final segments = path.split('/');
+    return segments.isNotEmpty ? segments.last : path;
   }
 
   @override
@@ -219,22 +295,64 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
+                if (isFetchingDocuments)
+                  const LinearProgressIndicator(
+                    backgroundColor: Colors.black12,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+                  ),
+                if (fetchDocumentsError != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            fetchDocumentsError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: isFetchingDocuments
+                              ? null
+                              : () => _loadUploadedDocuments(),
+                          child: const Text('Retry'),
+                        )
+                      ],
+                    ),
+                  ),
+                ],
                 _documentCard("ID Proof", "Upload Aadhaar, PAN, Passport etc.",
-                    idProofFile, isUploadingIdProof, idProofUploaded),
+                    idProofFile, isUploadingIdProof, idProofUploaded,
+                    existingDocument: _getDocumentDataForTitle("ID Proof")),
                 const SizedBox(height: 15),
                 _documentCard(
                     "Address Proof",
                     "Upload utility bill, rental agreement etc.",
                     addressProofFile,
                     isUploadingAddressProof,
-                    addressProofUploaded),
+                    addressProofUploaded,
+                    existingDocument:
+                        _getDocumentDataForTitle("Address Proof")),
                 const SizedBox(height: 15),
                 _documentCard(
                     "Verification Photo",
                     "Upload a clear passport - size photo",
                     verificationPhotoFile,
                     isUploadingVerificationPhoto,
-                    verificationPhotoUploaded),
+                    verificationPhotoUploaded,
+                    existingDocument:
+                        _getDocumentDataForTitle("Verification Photo")),
               ],
             ),
           ),
@@ -244,7 +362,13 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
   }
 
   Widget _documentCard(String title, String subtitle,
-      PlatformFile? selectedFile, bool isUploading, bool isUploaded) {
+      PlatformFile? selectedFile, bool isUploading, bool isUploaded,
+      {Map<String, dynamic>? existingDocument}) {
+    final documentStatus =
+        existingDocument?['status']?.toString().toLowerCase();
+    final bool isRejectedStatus = documentStatus == 'rejected';
+    final bool canUploadOrReplace = !isUploaded || isRejectedStatus;
+
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -267,6 +391,53 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
           const SizedBox(height: 4),
           Text(subtitle, style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 10),
+          if (existingDocument != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _extractFileName(
+                              existingDocument['file_path']?.toString()),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.cloud_done, color: Colors.green),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Status: ${_formatDocumentStatus(existingDocument['status']?.toString())}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                  if (existingDocument['remarks'] != null &&
+                      existingDocument['remarks'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Remarks: ${existingDocument['remarks']}',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (selectedFile != null) ...[
             Container(
               padding: const EdgeInsets.all(8),
@@ -294,13 +465,17 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
             const SizedBox(height: 10),
           ],
           ElevatedButton(
-            onPressed: isUploading ? null : () => _pickFile(title),
+            onPressed: (isUploading || !canUploadOrReplace)
+                ? null
+                : () => _pickFile(title),
             style: ElevatedButton.styleFrom(
               backgroundColor: isUploading
                   ? Colors.grey.shade300
-                  : isUploaded
-                      ? Colors.green.shade100
-                      : Colors.grey.shade200,
+                  : !isUploaded
+                      ? Colors.grey.shade200
+                      : isRejectedStatus
+                          ? Colors.orange.shade100
+                          : Colors.green.shade100,
               foregroundColor: Colors.black87,
               disabledBackgroundColor: Colors.grey.shade300,
             ),
@@ -321,7 +496,11 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
                       Text("Uploading..."),
                     ],
                   )
-                : Text(isUploaded ? "Replace" : "Upload / Replace"),
+                : Text(!isUploaded
+                    ? "Upload"
+                    : isRejectedStatus
+                        ? "Replace"
+                        : "Uploaded"),
           ),
         ],
       ),
