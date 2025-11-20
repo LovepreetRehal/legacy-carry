@@ -46,8 +46,28 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final country = countries.firstWhere((c) => c['id'] == countryId);
-      states = List<Map<String, dynamic>>.from(country['states']);
+      final url = Uri.parse('$baseUrl/countries/$countryId/states');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
+          states = List<Map<String, dynamic>>.from(data);
+        } else if (data is Map<String, dynamic>) {
+          if (data['states'] is List) {
+            states = List<Map<String, dynamic>>.from(data['states']);
+          } else if (data['data'] is List) {
+            states = List<Map<String, dynamic>>.from(data['data']);
+          } else {
+            debugPrint(
+                '❌ Unexpected states payload for country $countryId: ${response.body}');
+          }
+        }
+      } else {
+        debugPrint(
+            '❌ Failed to fetch states for $countryId: ${response.statusCode}');
+      }
     } catch (e) {
       debugPrint('❌ Error fetching states: $e');
     }
@@ -63,8 +83,28 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final state = states.firstWhere((s) => s['id'] == stateId);
-      cities = List<Map<String, dynamic>>.from(state['cities']);
+      final url = Uri.parse('$baseUrl/states/$stateId/cities');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
+          cities = List<Map<String, dynamic>>.from(data);
+        } else if (data is Map<String, dynamic>) {
+          if (data['cities'] is List) {
+            cities = List<Map<String, dynamic>>.from(data['cities']);
+          } else if (data['data'] is List) {
+            cities = List<Map<String, dynamic>>.from(data['data']);
+          } else {
+            debugPrint(
+                '❌ Unexpected cities payload for state $stateId: ${response.body}');
+          }
+        }
+      } else {
+        debugPrint(
+            '❌ Failed to fetch cities for $stateId: ${response.statusCode}');
+      }
     } catch (e) {
       debugPrint('❌ Error fetching cities: $e');
     }

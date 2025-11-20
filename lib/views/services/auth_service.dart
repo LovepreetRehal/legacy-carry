@@ -342,27 +342,29 @@ class AuthService {
 
   Future<List<dynamic>> getCountries() async {
     try {
-      final url = Uri.parse(
-          "$baseUrl/countries"); // 👈 replace with your actual base URL
+      final url = Uri.parse("$baseUrl/countries");
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
 
-        // If API returns something like { "data": [ ... ] }
-        if (data['data'] != null && data['data'] is List) {
-          return data['data'];
+        if (decoded is List) {
+          return decoded;
         }
 
-        // If API returns a raw list [ ... ]
-        if (data is List) {
-          return data;
+        if (decoded is Map<String, dynamic>) {
+          if (decoded['countries'] is List) {
+            return List<dynamic>.from(decoded['countries']);
+          }
+          if (decoded['data'] is List) {
+            return List<dynamic>.from(decoded['data']);
+          }
         }
 
-        // If structure is unexpected
+        print("❌ Unexpected countries response shape: ${response.body}");
         return [];
       } else {
-        print("❌ Failed: ${response.statusCode}");
+        print("❌ Failed to fetch countries: ${response.statusCode}");
         return [];
       }
     } catch (e) {
@@ -377,13 +379,25 @@ class AuthService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['data'] != null && data['data'] is List) {
-          return data['data'];
-        } else if (data is List) {
-          return data;
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is List) {
+          return decoded;
         }
+
+        if (decoded is Map<String, dynamic>) {
+          if (decoded['states'] is List) {
+            return List<dynamic>.from(decoded['states']);
+          }
+          if (decoded['data'] is List) {
+            return List<dynamic>.from(decoded['data']);
+          }
+        }
+
+        print("❌ Unexpected states response shape: ${response.body}");
+        return [];
       }
+      print("❌ Failed to fetch states: ${response.statusCode}");
       return [];
     } catch (e) {
       print("❌ Error fetching states: $e");
