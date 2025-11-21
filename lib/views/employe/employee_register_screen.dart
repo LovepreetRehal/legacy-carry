@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:legacy_carry/views/viewmodels/send_otp_viewmodel.dart';
 import 'professional_details_screen.dart';
@@ -33,8 +34,10 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  final List<TextEditingController> _otpControllers =
-  List.generate(6, (_) => TextEditingController());
+  // final List<TextEditingController> _otpControllers =
+  // List.generate(6, (_) => TextEditingController());
+
+  String otpValue = ""; // SAVE OTP HERE
 
   @override
   Widget build(BuildContext context) {
@@ -208,40 +211,78 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                         ),
                         const SizedBox(height: 12),
 
-                        // 🔢 OTP fields
-                        Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: List.generate(
-                            6,
-                                (index) => SizedBox(
-                              width: 45,
-                              child: TextFormField(
-                                controller: _otpControllers[index],
-                                textAlign: TextAlign.center,
-                                keyboardType: TextInputType.number,
-                                maxLength: 1,
-                                decoration: InputDecoration(
-                                  counterText: "",
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                validator: (value) =>
-                                value!.isEmpty ? "" : null,
-                              ),
-                            ),
+                        // // 🔢 OTP fields
+                        // Row(
+                        //   mainAxisAlignment:
+                        //   MainAxisAlignment.spaceBetween,
+                        //   children: List.generate(
+                        //     6,
+                        //         (index) => SizedBox(
+                        //       width: 45,
+                        //       child: TextFormField(
+                        //         controller: _otpControllers[index],
+                        //         textAlign: TextAlign.center,
+                        //         keyboardType: TextInputType.number,
+                        //         maxLength: 1,
+                        //         decoration: InputDecoration(
+                        //           counterText: "",
+                        //           filled: true,
+                        //           fillColor: Colors.white,
+                        //           border: OutlineInputBorder(
+                        //             borderRadius: BorderRadius.circular(8),
+                        //           ),
+                        //         ),
+                        //         validator: (value) =>
+                        //         value!.isEmpty ? "" : null,
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
+
+                        PinCodeTextField(
+                          appContext: context,
+                          length: 6,
+                          keyboardType: TextInputType.number,
+                          animationType: AnimationType.fade,
+                          cursorColor: Colors.green,
+                          autoFocus: true,
+                          textStyle: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
+                          enableActiveFill: true, // <-- WHITE BACKGROUND
+                          pinTheme: PinTheme(
+                            shape: PinCodeFieldShape.box,
+                            borderRadius: BorderRadius.circular(8),
+                            fieldHeight: 50,
+                            fieldWidth: 40,
+
+                            activeColor: Colors.green,
+                            inactiveColor: Colors.green,
+                            selectedColor: Colors.green,
+
+                            activeFillColor: Colors.white,
+                            inactiveFillColor: Colors.white,
+                            selectedFillColor: Colors.white,
+                          ),
+
+                          onChanged: (value) {
+                            otpValue = value;
+                          },
+
+                          onCompleted: (otp) {
+                            otpValue = otp;
+                          },
                         ),
+
+
                         const SizedBox(height: 12),
 
                         _buildTextFormField(
                           "Current Address*",
                           Icons.location_on,
                           controller: _addressController,
-                          hint: "India",
+                          hint: "Please enter address",
                           validator: (value) => value!.isEmpty
                               ? "Please enter address"
                               : null,
@@ -297,11 +338,11 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                       label: const Text("NEXT"),
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          final otpCode = _otpControllers
-                              .map((controller) => controller.text)
-                              .join();
+                          // final otpCode = otpValue
+                          //     .map((controller) => controller.text)
+                          //     .join();
 
-                          if (otpCode.length < 6) {
+                          if (otpValue.length < 6) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text("Enter full 6-digit OTP"),
@@ -320,7 +361,7 @@ class _EmployeeRegisterContentState extends State<_EmployeeRegisterContent> {
                                 phone: _phoneController.text.trim(),
                                 address: _addressController.text.trim(),
                                 password: _passwordController.text.trim(),
-                                otp: otpCode,
+                                otp: otpValue,
                               ),
                             ),
                           );

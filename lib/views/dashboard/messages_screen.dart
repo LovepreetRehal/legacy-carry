@@ -6,28 +6,28 @@ class MessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Static data commented out
-    // final List<Map<String, dynamic>> messages = [
-    //   {
-    //     'name': 'Rahul Sharma',
-    //     'message': 'Hey, did you Reach?',
-    //     'time': '10:32 am',
-    //     'unread': 2,
-    //   },
-    //   {
-    //     'name': 'Amit Kumar',
-    //     'message': 'Typing.....',
-    //     'time': '09:41 am',
-    //     'unread': 0,
-    //   },
-    //   {
-    //     'name': 'Priya Mehta',
-    //     'message': 'Okay',
-    //     'time': '08:32 am',
-    //     'unread': 1,
-    //   },
-    // ];
+    final List<Map<String, dynamic>> messages = [
+      {
+        'name': 'Rahul Sharma',
+        'message': 'Hey, did you Reach?',
+        'time': '10:32 am',
+        'unread': 2,
+      },
+      {
+        'name': 'Amit Kumar',
+        'message': 'Typing.....',
+        'time': '09:41 am',
+        'unread': 0,
+      },
+      {
+        'name': 'Priya Mehta',
+        'message': 'Okay',
+        'time': '08:32 am',
+        'unread': 1,
+      },
+    ];
 
-    final List<Map<String, dynamic>> messages = [];
+    // final List<Map<String, dynamic>> messages = [];
 
     return Scaffold(
       body: Container(

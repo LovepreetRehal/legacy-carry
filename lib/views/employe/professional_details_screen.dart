@@ -251,14 +251,14 @@ class _ProfessionalDetailsScreenState extends State<ProfessionalDetailsScreen> {
                         TextFormField(
                           controller: rateController,
                           decoration: _inputDecoration(
-                            hint: "₹ 700",
+                            hint: "₹ 0",
                             label: "Hourly Rate (₹)",
                           ),
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          "Suggested Range: ₹500 - ₹1000 per hour",
+                          "Suggested Price Range: ₹500–₹1000 per hour.",
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
 

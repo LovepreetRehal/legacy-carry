@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,26 +18,7 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final List<TextEditingController> otpControllers =
-  List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> otpFocusNodes =
-  List.generate(6, (_) => FocusNode());
-
-  @override
-  void dispose() {
-    for (var c in otpControllers) c.dispose();
-    for (var n in otpFocusNodes) n.dispose();
-    super.dispose();
-  }
-
-  /// Auto move to next or back
-  void _onOtpChanged(String value, int index) {
-    if (value.isNotEmpty && index < 5) {
-      otpFocusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      otpFocusNodes[index - 1].requestFocus();
-    }
-  }
+  String otpValue = ""; // SAVE OTP HERE
 
   @override
   Widget build(BuildContext context) {
@@ -98,40 +80,46 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // -------- OTP BOXES -------- //
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(6, (index) {
-                          return SizedBox(
-                            width: 40,
-                            child: TextField(
-                              controller: otpControllers[index],
-                              focusNode: otpFocusNodes[index],
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              maxLength: 1,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              decoration: InputDecoration(
-                                counterText: '',
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onChanged: (value) => _onOtpChanged(value, index),
-                            ),
-                          );
-                        }),
+                      // 🔥 PIN CODE FIELD (White Background)
+                      PinCodeTextField(
+                        appContext: context,
+                        length: 6,
+                        keyboardType: TextInputType.number,
+                        animationType: AnimationType.fade,
+                        cursorColor: Colors.green,
+                        autoFocus: true,
+                        textStyle: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        enableActiveFill: true, // <-- WHITE BACKGROUND
+                        pinTheme: PinTheme(
+                          shape: PinCodeFieldShape.box,
+                          borderRadius: BorderRadius.circular(8),
+                          fieldHeight: 50,
+                          fieldWidth: 40,
+
+                          activeColor: Colors.green,
+                          inactiveColor: Colors.green,
+                          selectedColor: Colors.green,
+
+                          activeFillColor: Colors.white,
+                          inactiveFillColor: Colors.white,
+                          selectedFillColor: Colors.white,
+                        ),
+
+                        onChanged: (value) {
+                          otpValue = value;
+                        },
+
+                        onCompleted: (otp) {
+                          otpValue = otp;
+                        },
                       ),
 
                       const SizedBox(height: 20),
 
-                      // -------- VERIFY BUTTON -------- //
+                      // VERIFY BUTTON
                       SizedBox(
                         width: double.infinity,
                         height: 48,
@@ -139,64 +127,42 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           onPressed: otpVM.status == OtpStatus.loading
                               ? null
                               : () async {
-                            // Collect OTP
-                            final enteredOtp = otpControllers
-                                .map((c) => c.text.trim())
-                                .join();
-
-                            // Validation
-                            if (enteredOtp.length != 6) {
+                            if (otpValue.length != 6) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content:
-                                  Text("Please enter all 6 digits"),
+                                  content: Text("Please enter valid 6-digit OTP"),
                                   backgroundColor: Colors.red,
                                 ),
                               );
                               return;
                             }
 
-                            // Call API
                             await otpVM.verifyUserOtp(
                               phone: widget.phoneNumber,
-                              otp: enteredOtp,
+                              otp: otpValue,
                             );
 
-                            // SUCCESS
                             if (otpVM.status == OtpStatus.success) {
                               final user = otpVM.otpResponse?['user'];
-                              final role = user?['role']
-                                  ?.toString()
-                                  .toLowerCase();
-                              final token =
-                              otpVM.otpResponse?['token'];
+                              final role = user?['role']?.toString().toLowerCase();
+                              final token = otpVM.otpResponse?['token'];
 
-                              // Save Auth Data
-                              final prefs =
-                              await SharedPreferences.getInstance();
-                              if (token != null) {
-                                await prefs.setString(
-                                    'auth_token', token);
-                              }
-                              if (role != null) {
-                                await prefs.setString(
-                                    'user_role', role);
-                              }
+                              final prefs = await SharedPreferences.getInstance();
+                              if (token != null) prefs.setString('auth_token', token);
+                              if (role != null) prefs.setString('user_role', role);
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("OTP Verified ✅"),
+                                  content: Text("OTP Verified Successfully"),
                                   backgroundColor: Colors.green,
                                 ),
                               );
 
-                              // NAVIGATION
                               if (role == 'customer') {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                    const ResidentDashboardScreen(),
+                                    builder: (_) => const ResidentDashboardScreen(),
                                   ),
                                 );
                               } else if (role == 'labor') {
@@ -233,25 +199,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               );
                             }
                           },
+
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green[700],
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
+
                           child: otpVM.status == OtpStatus.loading
                               ? const CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2)
-                              : const Text(
-                            "Verify & Continue",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                              : const Text("Verify & Continue", style: TextStyle(fontSize: 16)),
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ),
-              ),
+              )
             ],
           ),
         );
@@ -259,3 +224,4 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 }
+

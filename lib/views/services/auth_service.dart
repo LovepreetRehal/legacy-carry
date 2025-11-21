@@ -482,7 +482,10 @@ class AuthService {
     print("getRecommendedJobs body -> ${jsonEncode({
           'employer_id': employerId
         })}");
-    print("getRecommendedJobs response -> ${response.body}");
+    print("GetHomeEmployee  body -> ${jsonEncode({
+          'employer_id': employerId
+        })}");
+    print("getRecommendedJobs response -> ${baseUrl+"/jobs"}");
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
@@ -675,6 +678,9 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
     );
+
+    print("getRecommendedJobs response -> ${baseUrl+"/jobs"}");
+
 
     print("getEmployeeDraftJobs response -> ${response.body}");
 

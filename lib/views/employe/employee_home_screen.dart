@@ -12,15 +12,20 @@ class EmployeeHomeScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GetJobViewmodel()..fetchDashboardData(),
       child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: SafeArea(
+        body:
+        Stack(
+            children: [
+        Container(
+        decoration: const BoxDecoration(
+        gradient: LinearGradient(
+            colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+    ),
+    ),
+
+           SafeArea(
             child: Consumer<GetJobViewmodel>(
               builder: (context, vm, _) {
                 final recommendedJobs =
@@ -70,44 +75,51 @@ class EmployeeHomeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildInfoCard(
-                              "Active Jobs", activeJobs.length.toString()),
-                          _buildInfoCard("Applicants", "00"),
-                          _buildInfoCard("Upcoming Shifts", "00"),
+                              "Today", activeJobs.length.toString()),
+                          _buildInfoCard("This Week", "00"),
+                          _buildInfoCard("Balance", "00"),
                         ],
                       ),
                       const SizedBox(height: 16),
 
-                      // Action Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // _buildActionButton(
-                          //   icon: Icons.post_add,
-                          //   label: "Post Job",
-                          //   onTap: () {
-                          //     Navigator.push(
-                          //       context,
-                          //       MaterialPageRoute(
-                          //         builder: (context) => const PostAJobOne(),
-                          //       ),
-                          //     );
-                          //   },
-                          // ),
-                          _buildActionButton(
+
+
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            _buildGreenMenu(
                               icon: Icons.search,
                               label: "Find Jobs",
-                              onTap: () {}),
-                          _buildActionButton(
-                              icon: Icons.message,
+                              onTap: () {},
+                            ),
+                            _buildGreenMenu(
+                              icon: Icons.work_outline,
+                              label: "My Jobs",
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            _buildGreenMenu(
+                              icon: Icons.attach_money,
+                              label: "Earnings",
+                              onTap: () {},
+                            ),
+                            _buildGreenMenu(
+                              icon: Icons.message_outlined,
                               label: "Messages",
-                              onTap: () {}),
-                          _buildActionButton(
-                              icon: Icons.payment,
-                              label: "Payments",
-                              onTap: () {}),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+
+
+                    const SizedBox(height: 24),
 
                       // Recommended Jobs
                       const Text(
@@ -180,6 +192,7 @@ class EmployeeHomeScreen extends StatelessWidget {
               },
             ),
           ),
+            ],
         ),
       ),
     );
@@ -406,6 +419,42 @@ class EmployeeHomeScreen extends StatelessWidget {
         return payType;
     }
   }
+
+  Widget _buildGreenMenu({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 55,
+          margin: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.green[800],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 }
 
 /*

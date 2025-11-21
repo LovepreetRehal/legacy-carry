@@ -8,9 +8,9 @@ class ResidentHomeScreen extends StatelessWidget {
   const ResidentHomeScreen({super.key});
 
   static const List<Map<String, String>> recentApplicants = [
-    {"name": "Vikas", "job": "Electrician", "emoji": "🔌"},
-    {"name": "Rahul", "job": "Plumber", "emoji": "🚰"},
-    {"name": "Sunita", "job": "Cook", "emoji": "🍳"},
+    // {"name": "Vikas", "job": "Electrician", "emoji": "🔌"},
+    // {"name": "Rahul", "job": "Plumber", "emoji": "🚰"},
+    // {"name": "Sunita", "job": "Cook", "emoji": "🍳"},
   ];
 
   @override
@@ -62,9 +62,9 @@ class ResidentHomeScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildStatCard("Active Jobs", "26"),
-                    _buildStatCard("Applicants", "09"),
-                    _buildStatCard("Upcoming Shifts", "01"),
+                    _buildStatCard("Active Jobs", "0"),
+                    _buildStatCard("Applicants", "0"),
+                    _buildStatCard("Upcoming Shifts", "0"),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -93,7 +93,18 @@ class ResidentHomeScreen extends StatelessWidget {
 
                 // Recent Applicants List
                 Expanded(
-                  child: ListView.builder(
+                  child: recentApplicants.isEmpty
+                      ? const Center(
+                    child: Text(
+                      "No Data Yet!!",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  )
+                      :ListView.builder(
                     itemCount: recentApplicants.length,
                     itemBuilder: (context, index) {
                       final applicant = recentApplicants[index];
@@ -188,7 +199,7 @@ class ResidentHomeScreen extends StatelessWidget {
               // Placeholder: You can implement navigation for other buttons as desired
             }
           },
-          icon: Icon(icon, size: 18, color: Colors.black87),
+          icon: Icon(icon, size: 14, color: Colors.black87),
           label: Text(
             label,
             style: const TextStyle(color: Colors.black87),
