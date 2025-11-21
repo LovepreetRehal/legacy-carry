@@ -616,7 +616,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPaymentMethodDialog({Map<String, dynamic>? existingMethod}) {
+  Future<void> _showPaymentMethodDialog(
+      {Map<String, dynamic>? existingMethod}) async {
     if (_currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -662,7 +663,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       accountHolderController.dispose();
     }
 
-    showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
@@ -892,7 +893,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         );
       },
-    ).whenComplete(closeControllers);
+    );
+
+    await closeControllers();
   }
 }
 

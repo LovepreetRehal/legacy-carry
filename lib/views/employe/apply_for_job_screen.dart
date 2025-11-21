@@ -5,8 +5,11 @@ import '../services/auth_service.dart';
 
 class ApplyForJobScreen extends StatefulWidget {
   final String jobId;
+  final String residentId;
 
-  const ApplyForJobScreen({Key? key, required this.jobId}) : super(key: key);
+  const ApplyForJobScreen(
+      {Key? key, required this.jobId, required this.residentId})
+      : super(key: key);
 
   @override
   State<ApplyForJobScreen> createState() => _ApplyForJobScreenState();
@@ -345,6 +348,7 @@ class _ApplyForJobScreenState extends State<ApplyForJobScreen> {
         messageToEmployer: messageController.text.trim(),
         certificatePhoto: certificatePhoto,
         userId: userId,
+        residentId: widget.residentId,
       );
 
       if (mounted) {

@@ -470,22 +470,21 @@ class AuthService {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/jobs'),
+    final response = await http.get(
+      Uri.parse('$baseUrl/jobs/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({'employer_id': employerId}),
+      //body: jsonEncode({'employer_id': employerId}),
     );
 
     print("getRecommendedJobs body -> ${jsonEncode({
           'employer_id': employerId
         })}");
-    print("GetHomeEmployee  body -> ${jsonEncode({
-          'employer_id': employerId
-        })}");
-    print("getRecommendedJobs response -> ${baseUrl+"/jobs"}");
+    print(
+        "GetHomeEmployee  body -> ${jsonEncode({'employer_id': employerId})}");
+    print("getRecommendedJobs response -> ${baseUrl + "/jobs"}");
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
@@ -500,29 +499,34 @@ class AuthService {
     }
   }
 
-  /// Get Active Jobs
-  Future<List<dynamic>> getActiveJobs() async {
+  /// Get Resident Jobs by status (active, draft, completed)
+  Future<List<dynamic>> getResidentJobs({
+    required int userId,
+    required String status,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
+    final normalizedStatus = status.toLowerCase();
     final response = await http.get(
-      Uri.parse('$baseUrl/jobs/active'),
+      Uri.parse('$baseUrl/resident-jobs/$userId/$normalizedStatus'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     );
 
-    print("getActiveJobs response -> ${response.body}");
+    print(
+        "getResidentJobs($normalizedStatus) response -> ${response.statusCode} ${response.body}");
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
+      final data = jsonData is Map<String, dynamic> ? jsonData['data'] : null;
 
-      if (jsonData is Map && jsonData['data'] is Map) {
-        // Convert Map to List
-        return jsonData['data'].values.toList();
-      } else if (jsonData is Map && jsonData['data'] is List) {
-        return jsonData['data'];
+      if (data is List) {
+        return List<dynamic>.from(data);
+      } else if (data is Map) {
+        return data.values.toList();
       } else {
         return [];
       }
@@ -531,63 +535,114 @@ class AuthService {
     }
   }
 
-  /// Get Upcoming Jobs (Draft)
-  Future<List<dynamic>> getUpcomingJobs() async {
+  Future<Map<String, dynamic>> updateJobStatus({
+    required int jobId,
+    required String status,
+    required int approvedBy,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/jobs/draft'),
+    final response = await http.post(
+      Uri.parse('$baseUrl/jobs/$jobId/status'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
+      body: jsonEncode({
+        'status': status,
+        'approved_by': approvedBy,
+      }),
     );
 
-    print("getUpcomingJobs response -> ${response.body}");
+    print(
+        "updateJobStatus($jobId -> $status) response -> ${response.statusCode} ${response.body}");
+
+    Map<String, dynamic>? jsonData;
+    try {
+      jsonData = jsonDecode(response.body);
+    } catch (_) {
+      // ignore json decode error, handled below
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final isSuccess =
+          (jsonData?['status'] == true) || (jsonData?['success'] == true);
+      if (isSuccess && jsonData != null) {
+        return jsonData;
+      }
+      final message = jsonData?['message'] ??
+          'Failed to update job status. Please try again.';
+      throw Exception(message);
+    } else {
+      final message =
+          jsonData?['message'] ?? 'Server error: ${response.statusCode}';
+      throw Exception(message);
+    }
+  }
+
+  Future<List<dynamic>> searchResidentJobs({
+    required int userId,
+    String keyword = '',
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/resident-search-jobs/$userId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'keyword': keyword}),
+    );
+
+    print(
+        "searchResidentJobs response -> ${response.statusCode} ${response.body}");
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
+      final data = jsonData is Map<String, dynamic> ? jsonData['data'] : null;
 
-      if (jsonData is Map && jsonData['data'] is Map) {
-        // Convert Map to List
-        return jsonData['data'].values.toList();
-      } else if (jsonData is Map && jsonData['data'] is List) {
-        return jsonData['data'];
-      } else {
-        return [];
+      if (data is List) {
+        return List<dynamic>.from(data);
+      } else if (data is Map) {
+        return data.values.toList();
       }
+      return [];
     } else {
       throw Exception('Server error: ${response.statusCode}');
     }
   }
 
-  /// Get Completed Jobs
-  Future<List<dynamic>> getCompletedJobs() async {
+  Future<List<dynamic>> searchEmployeeJobs({
+    String keyword = '',
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/jobs/completed'),
+    final response = await http.post(
+      Uri.parse('$baseUrl/search-jobs'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
+      body: jsonEncode({'keyword': keyword}),
     );
 
-    print("getCompletedJobs response -> ${response.body}");
+    print(
+        "searchEmployeeJobs response -> ${response.statusCode} ${response.body}");
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
+      final data = jsonData is Map<String, dynamic> ? jsonData['data'] : null;
 
-      if (jsonData is Map && jsonData['data'] is Map) {
-        // Convert Map to List
-        return jsonData['data'].values.toList();
-      } else if (jsonData is Map && jsonData['data'] is List) {
-        return jsonData['data'];
-      } else {
-        return [];
+      if (data is List) {
+        return List<dynamic>.from(data);
+      } else if (data is Map) {
+        return data.values.toList();
       }
+      return [];
     } else {
       throw Exception('Server error: ${response.statusCode}');
     }
@@ -597,37 +652,57 @@ class AuthService {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/jobs/$jobId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
-    print("getJobDetails response -> ${response.body}");
+    final endpoints = [
+      '$baseUrl/job-detials/$jobId',
+      '$baseUrl/jobs-detials/$jobId',
+      '$baseUrl/job-details/$jobId',
+    ];
 
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
+    Exception? lastError;
 
-      if (jsonData is Map<String, dynamic>) {
+    for (final endpoint in endpoints) {
+      try {
+        final response = await http.get(Uri.parse(endpoint), headers: headers);
+        print("getJobDetails($endpoint) response -> ${response.body}");
+
+        if (response.statusCode != 200) {
+          lastError =
+              Exception('Server error: ${response.statusCode} ($endpoint)');
+          continue;
+        }
+
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData is! Map<String, dynamic>) {
+          lastError = Exception('Unexpected response format ($endpoint)');
+          continue;
+        }
+
         final bool isSuccess =
             jsonData['status'] == true || jsonData['success'] == true;
         if (!isSuccess) {
-          throw Exception(jsonData['message'] ?? 'Failed to fetch job details');
+          lastError = Exception(
+              jsonData['message'] ?? 'Failed to fetch job details ($endpoint)');
+          continue;
         }
 
         if (jsonData['data'] is Map<String, dynamic>) {
           return Map<String, dynamic>.from(jsonData['data']);
         }
 
-        throw Exception('Job details missing in response');
-      } else {
-        throw Exception('Unexpected response format');
+        lastError = Exception('Job details missing in response ($endpoint)');
+      } catch (e) {
+        lastError = Exception('Failed to fetch job details ($endpoint): $e');
       }
-    } else {
-      throw Exception('Server error: ${response.statusCode}');
     }
+
+    throw lastError ??
+        Exception('Unable to fetch job details from available endpoints.');
   }
 
   /// Get Employee Active Jobs
@@ -679,8 +754,7 @@ class AuthService {
       },
     );
 
-    print("getRecommendedJobs response -> ${baseUrl+"/jobs"}");
-
+    print("getRecommendedJobs response -> ${baseUrl + "/jobs"}");
 
     print("getEmployeeDraftJobs response -> ${response.body}");
 
@@ -732,6 +806,65 @@ class AuthService {
       }
     } else {
       throw Exception('Server error: ${response.statusCode}');
+    }
+  }
+
+  /// Filter Employee Jobs by Status (active, upcoming, completed)
+  /// Endpoint: /filter-jobs/{user_id}/{status}?email={email}
+  Future<List<dynamic>> filterEmployeeJobsByStatus({
+    required int userId,
+    required String status, // 'active', 'upcoming', 'completed'
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    try {
+      // Get user email from profile
+      final profile = await getUserProfile();
+      final dynamic userData = profile['user'] ?? profile['data'] ?? profile;
+      final String? email = userData?['email'] ?? profile['email'];
+
+      if (email == null || email.isEmpty) {
+        throw Exception('User email not found');
+      }
+
+      // Build URL with query parameter
+      final url = Uri.parse('$baseUrl/filter-jobs/$userId/$status').replace(
+        queryParameters: {'email': email},
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print("filterEmployeeJobsByStatus($status) response -> ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        // Check if status is true
+        if (jsonData is Map && jsonData['status'] == true) {
+          // Extract data array from response
+          if (jsonData['data'] is List) {
+            return jsonData['data'];
+          } else if (jsonData['data'] is Map) {
+            return jsonData['data'].values.toList();
+          } else {
+            return [];
+          }
+        } else {
+          throw Exception(jsonData['message'] ?? 'Failed to fetch jobs');
+        }
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Error in filterEmployeeJobsByStatus: $e");
+      rethrow;
     }
   }
 
@@ -1067,6 +1200,7 @@ class AuthService {
     required String messageToEmployer,
     String certificatePhoto = '',
     required String userId,
+    required String residentId,
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('User not logged in');
@@ -1088,6 +1222,7 @@ class AuthService {
           'message_to_employer': messageToEmployer,
           'certificate_photo': certificatePhoto,
           'user_id': userId,
+          'resident_id': residentId,
         }),
       );
 
@@ -1099,6 +1234,7 @@ class AuthService {
             'message_to_employer': messageToEmployer,
             'certificate_photo': certificatePhoto,
             'user_id': userId,
+            'resident_id': residentId,
           })}");
       print(" Status Code: ${response.statusCode}");
       print(" Response Body: ${response.body}");
@@ -1334,6 +1470,151 @@ class AuthService {
       }
     } catch (e, stack) {
       print(" Exception while updating language & region: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Get Applications for a Job (Resident)
+  /// Fetches all applications for a specific job
+  /// Note: The endpoint may return all applications for the resident's jobs,
+  /// so we filter by job_id to get applications for the specific job
+  Future<List<dynamic>> getApplicationsForJob({required String jobId}) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    // First, try to get user profile to get user_id
+    // The endpoint might use user_id, so we'll get it first
+    final profile = await getUserProfile();
+    final dynamic userData = profile['user'] ??
+        profile['data']?['user'] ??
+        profile['data'] ??
+        profile;
+    final dynamic userIdCandidate = userData?['id'] ?? profile['id'];
+
+    if (userIdCandidate == null) {
+      throw Exception('Unable to determine user ID');
+    }
+
+    final userId = userIdCandidate.toString();
+    final url = Uri.parse('$baseUrl/get-applications-resident/$userId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(" Get Applications for Job URL: $url");
+      print(" User ID: $userId");
+      print(" Job ID (filtering): $jobId");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+
+        if (jsonResponse is Map && jsonResponse['status'] == true) {
+          // Get all applications from the response
+          List<dynamic> allApplications = [];
+          if (jsonResponse['applications'] is List) {
+            allApplications = jsonResponse['applications'];
+          }
+
+          // Filter applications by job_id to get only applications for this specific job
+          final jobIdNum = int.tryParse(jobId);
+          final filteredApplications = allApplications.where((app) {
+            final appJobId = app['job_id'];
+            // Try to match job_id as both int and string
+            if (appJobId == null) return false;
+            if (appJobId.toString() == jobId) return true;
+            if (jobIdNum != null && appJobId == jobIdNum) return true;
+            return false;
+          }).toList();
+
+          print(" Total applications: ${allApplications.length}");
+          print(
+              " Filtered applications for job $jobId: ${filteredApplications.length}");
+
+          return filteredApplications;
+        } else {
+          final errorMessage =
+              jsonResponse['message'] ?? 'Failed to fetch applications for job';
+          throw Exception(errorMessage);
+        }
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e, stack) {
+      print(" Exception while fetching applications for job: $e");
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Update Application Status (Resident)
+  /// Updates the status of an application (hired, applied, completed, cancel)
+  /// The id in the body is the application_id
+  Future<Map<String, dynamic>> updateApplicationStatus({
+    required int applicationId,
+    required String status, // 'applied', 'hired', 'completed', 'cancel'
+    bool? shortlisted,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('User not logged in');
+
+    final url = Uri.parse('$baseUrl/resident-application-status');
+
+    try {
+      final body = {
+        'id': applicationId,
+        'status': status,
+      };
+
+      // Add shortlisted if provided
+      if (shortlisted != null) {
+        body['shortlisted'] = shortlisted;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print(" Update Application Status URL: $url");
+      print(" Application ID: $applicationId");
+      print(" Status: $status");
+      print(" Shortlisted: $shortlisted");
+      print(" Request Body: ${jsonEncode(body)}");
+      print(" Status Code: ${response.statusCode}");
+      print(" Response Body: ${response.body}");
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (jsonResponse['status'] == true || jsonResponse['success'] == true) {
+          return jsonResponse;
+        } else {
+          final errorMessage =
+              jsonResponse['message'] ?? 'Failed to update application status';
+          throw Exception(errorMessage);
+        }
+      } else {
+        final errorMessage = jsonResponse['message'] ??
+            'Failed to update application status. Server error: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
+    } catch (e, stack) {
+      print(" Exception while updating application status: $e");
       print(stack);
       rethrow;
     }

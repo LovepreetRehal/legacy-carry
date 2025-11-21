@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -92,18 +93,11 @@ class _EditJobScreenState extends State<EditJobScreen> {
       _jobType = job['job_type'];
     }
 
-    // Skills required
-    if (job['skills_required'] is List) {
-      _skillsRequired = List<String>.from(job['skills_required']);
-    }
-
     // Tools provided
     _toolsProvided = job['tools_provided'] == true;
 
-    // Documents required
-    if (job['documents_required'] is List) {
-      _documentsRequired = List<String>.from(job['documents_required']);
-    }
+    _skillsRequired = _parseStringList(job['skills_required']);
+    _documentsRequired = _parseStringList(job['documents_required']);
 
     // Pay type
     if (job['pay_type'] != null &&
@@ -128,6 +122,40 @@ class _EditJobScreenState extends State<EditJobScreen> {
     } catch (_) {
       return value.toString();
     }
+  }
+
+  List<String> _parseStringList(dynamic raw) {
+    if (raw == null) return [];
+
+    if (raw is List) {
+      return raw.map((e) => e.toString()).toList();
+    }
+
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return [];
+
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          return decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        // fall back to comma separated values
+      }
+
+      if (trimmed.contains(',')) {
+        return trimmed
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      return [trimmed];
+    }
+
+    return [];
   }
 
   @override
@@ -876,8 +904,7 @@ class _EditJobScreenState extends State<EditJobScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pop(context,
-                    true); 
+                Navigator.pop(context, true);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),

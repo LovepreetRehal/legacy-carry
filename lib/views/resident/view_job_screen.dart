@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:legacy_carry/views/resident/applicants_screen.dart';
 import '../services/auth_service.dart';
 import 'edit_job_screen.dart';
 
@@ -195,15 +196,36 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                         // Action Buttons
                         Row(
                           children: [
-                            /*    Expanded(
+                            Expanded(
                               child: ElevatedButton(
                                 onPressed: () {
+                                  // Get job ID from jobData
+                                  final jobId =
+                                      widget.jobData['id']?.toString() ??
+                                          widget.jobData['job_id']?.toString();
+                                  if (jobId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Job ID not found'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
                                   // Navigate to view applicants
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ApplicantsScreen(jobId: jobId),
+                                    ),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF2E7D32),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -217,7 +239,7 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                                   ),
                                 ),
                               ),
-                            ),*/
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: ElevatedButton(
