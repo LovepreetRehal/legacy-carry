@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/resident/applicants_screen.dart';
 import '../services/auth_service.dart';
@@ -14,37 +15,250 @@ class ViewJobScreen extends StatefulWidget {
 
 class _ViewJobScreenState extends State<ViewJobScreen> {
   final AuthService _authService = AuthService();
+  late Map<String, dynamic> _jobData;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _jobData = Map<String, dynamic>.from(widget.jobData);
+    _fetchJobDetails();
+  }
+
+  Future<void> _fetchJobDetails() async {
+    final jobId = _extractJobId(_jobData);
+    if (jobId == null) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Job ID not available';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _authService.getJobDetails(jobId);
+      if (!mounted) return;
+      setState(() {
+        _jobData = {..._jobData, ...result};
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String? _extractJobId(Map<String, dynamic> data) {
+    final dynamic idValue = data['id'] ?? data['job_id'];
+    if (idValue == null) return null;
+    final id = idValue.toString();
+    return id.isEmpty ? null : id;
+  }
+
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return 'Not specified';
+
+    try {
+      String dateStr = dateValue.toString();
+      DateTime date = DateTime.parse(dateStr);
+
+      List<String> months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+
+      String day = date.day.toString();
+      String month = months[date.month - 1];
+      String year = date.year.toString();
+
+      return '$day $month $year';
+    } catch (e) {
+      // If parsing fails, return the original string or a default value
+      return dateValue.toString();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFD4A745), Color(0xFF7BC57B)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: const SafeArea(
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E7D32)),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Show error message
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFD4A745), Color(0xFF7BC57B)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon:
+                            const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'View Job',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Color(0xFFD32F2F),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () {
+                              _fetchJobDetails();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 24,
+                              ),
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     // Extract data from jobData
-    final String title = widget.jobData['title']?.toString() ??
-        widget.jobData['job_title']?.toString() ??
+    final String title = _jobData['title']?.toString() ??
+        _jobData['job_title']?.toString() ??
         'Warehouse Helper';
-    final String status =
-        widget.jobData['status']?.toString() ?? 'Open / Ongoing';
-    final String payRate = widget.jobData['pay_rate']?.toString() ??
-        widget.jobData['hourly_rate']?.toString() ??
-        '₹150 per hour';
-    final String shift = widget.jobData['shift']?.toString() ??
-        widget.jobData['shift_duration']?.toString() ??
+    final String status = _jobData['status']?.toString() ?? 'Open / Ongoing';
+    final String payRate = _jobData['pay_rate']?.toString() ??
+        _jobData['hourly_rate']?.toString() ??
+        (_jobData['pay_amount'] != null
+            ? '₹${_jobData['pay_amount']} / ${_jobData['pay_type']?.toString() ?? 'per_day'}'
+            : '₹150 per hour');
+    final String shift = _jobData['shift']?.toString() ??
+        _jobData['shift_duration']?.toString() ??
+        _jobData['time']?.toString() ??
         '4 hrs (09:00Am-01:00pm)';
-    final String location = widget.jobData['location']?.toString() ??
-        widget.jobData['job_location']?.toString() ??
+    final String location = _jobData['location']?.toString() ??
+        _jobData['job_location']?.toString() ??
         'City Center, Delhi';
-    final String postedDate = widget.jobData['posted_date']?.toString() ??
-        widget.jobData['created_at']?.toString() ??
-        '16 Sept 2025';
+    final String postedDate =
+        _formatDate(_jobData['posted_date'] ?? _jobData['created_at'] ?? null);
     final int applicants =
-        int.tryParse(widget.jobData['applicants_count']?.toString() ?? '0') ??
-            int.tryParse(widget.jobData['applicants']?.toString() ?? '0') ??
+        int.tryParse(_jobData['applicants_count']?.toString() ?? '0') ??
+            int.tryParse(_jobData['applicants']?.toString() ?? '0') ??
             5;
-    final String description = widget.jobData['description']?.toString() ??
-        widget.jobData['job_description']?.toString() ??
+    final String description = _jobData['description']?.toString() ??
+        _jobData['job_description']?.toString() ??
         'Looking for a reliable warehouse helper to assist with loading/Unloading goods and organizing inventory. Physical work required.';
-    final List<String> skills = widget.jobData['skills'] is List
-        ? (widget.jobData['skills'] as List).map((e) => e.toString()).toList()
-        : ['Basic Lifting', 'Time Management', 'Team Work'];
+
+    // Handle skills_required as list or string
+    List<String> skills = [];
+    if (_jobData['skills_required'] != null) {
+      if (_jobData['skills_required'] is List) {
+        skills = (_jobData['skills_required'] as List)
+            .map((e) => e.toString())
+            .toList();
+      } else if (_jobData['skills_required'] is String) {
+        try {
+          final decoded = jsonDecode(_jobData['skills_required']);
+          if (decoded is List) {
+            skills = List<String>.from(decoded);
+          }
+        } catch (_) {
+          skills = [_jobData['skills_required'].toString()];
+        }
+      }
+    } else if (_jobData['skills'] is List) {
+      skills = (_jobData['skills'] as List).map((e) => e.toString()).toList();
+    }
+
+    if (skills.isEmpty) {
+      skills = ['Basic Lifting', 'Time Management', 'Team Work'];
+    }
 
     return Scaffold(
       body: Container(
@@ -200,9 +414,7 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                               child: ElevatedButton(
                                 onPressed: () {
                                   // Get job ID from jobData
-                                  final jobId =
-                                      widget.jobData['id']?.toString() ??
-                                          widget.jobData['job_id']?.toString();
+                                  final jobId = _extractJobId(_jobData);
                                   if (jobId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -249,14 +461,14 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => EditJobScreen(
-                                        jobData: widget.jobData,
+                                        jobData: _jobData,
                                       ),
                                     ),
                                   );
 
-                                  // If job was updated successfully, go back to refresh the list
+                                  // If job was updated successfully, refresh the job details
                                   if (result == true && mounted) {
-                                    Navigator.pop(context, true);
+                                    _fetchJobDetails();
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -342,7 +554,7 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
   Future<void> _deleteJob() async {
     try {
       // Get job ID from jobData
-      final jobId = widget.jobData['id']?.toString();
+      final jobId = _extractJobId(_jobData);
       if (jobId == null) {
         _showErrorDialog('Job ID not found');
         return;
