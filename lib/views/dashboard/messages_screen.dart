@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../chat_screen.dart';
+
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
 
@@ -160,6 +162,15 @@ class MessagesScreen extends StatelessWidget {
                               ),
                               onTap: () {
                                 // TODO: Navigate to chat screen
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ChatScreen(chatId: '12', myId: '10', myName: 'Lovepreet', otherName: 'Sukh',),
+                                  ),
+                                );
+
                               },
                             );
                           },
