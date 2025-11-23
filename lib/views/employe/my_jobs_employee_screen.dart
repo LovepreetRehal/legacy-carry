@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/employee_jobs_viewmodel.dart';
-import '../resident/edit_job_screen.dart';
 
 class FindMyJobsScreen extends StatefulWidget {
   const FindMyJobsScreen({Key? key}) : super(key: key);
@@ -12,7 +11,7 @@ class FindMyJobsScreen extends StatefulWidget {
 }
 
 class _JobListingScreenState extends State<FindMyJobsScreen> {
-  String selectedTab = 'Active';
+  String selectedTab = 'Active'; // Active, Upcoming, or Completed
 
   @override
   Widget build(BuildContext context) {
@@ -117,11 +116,11 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: _buildTabButton('Drafts', vm),
+                                      child: _buildTabButton('Upcoming', vm),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: _buildTabButton('Hourly', vm),
+                                      child: _buildTabButton('Completed', vm),
                                     ),
                                   ],
                                 ),
@@ -150,10 +149,8 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
                                         itemBuilder: (context, index) {
                                           final job = filteredJobs[index];
                                           return _buildJobCard(
-                                            job: job,
-                                            showEditDelete:
-                                                selectedTab == 'Drafts',
-                                          );
+                                              job: job,
+                                              selectedTab: selectedTab);
                                         },
                                       ),
                               ),
@@ -199,17 +196,29 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
 
   Widget _buildJobCard({
     required Map<String, dynamic> job,
-    required bool showEditDelete,
+    required String selectedTab,
   }) {
-    // Extract data from job object
-    final String title = job['title'] ?? job['job_title'] ?? 'No Title';
-    final String postedDate =
-        job['posted_date'] ?? job['created_at'] ?? job['postedOn'] ?? 'N/A';
-    final int applicants = job['applicants_count'] ?? job['applicants'] ?? 0;
-    final String? payRate = job['pay_rate'] ?? job['hourly_rate'];
-    final String? shift = job['shift'] ?? job['shift_duration'];
-    final String? location = job['location'] ?? job['job_location'];
-    final String status = job['status'] ?? 'open';
+    // Extract nested job post data
+    final Map<String, dynamic>? jobPost =
+        job['job_post'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(job['job_post'])
+            : null;
+
+    final String title =
+        jobPost?['job_title'] ?? job['job_title'] ?? job['title'] ?? 'No Title';
+    final String startDatetime =
+        job['start_datetime'] ?? jobPost?['start_date'] ?? 'N/A';
+    final String? expectedCost = job['expected_cost']?.toString();
+    final String applicationStatus =
+        job['status'] ?? job['application_status'] ?? 'applied';
+    final int shortlisted = job['shortlisted'] ?? 0;
+    final String? messageToEmployer = job['message_to_employer'];
+    final int? jobId = job['job_id'] ?? jobPost?['id'];
+
+    final String? location = jobPost?['location'] ?? jobPost?['address'];
+    final String? shift = jobPost?['shift'];
+    final String? payAmount = jobPost?['pay_amount']?.toString();
+    final String? payType = jobPost?['pay_type'];
 
     return Container(
       decoration: BoxDecoration(
@@ -262,16 +271,22 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
                     Icon(
                       Icons.circle,
                       size: 8,
-                      color: status.toLowerCase() == 'open' ||
-                              status.toLowerCase() == 'active'
+                      color: applicationStatus.toLowerCase() == 'applied' ||
+                              applicationStatus.toLowerCase() == 'shortlisted'
                           ? const Color(0xFF4CAF50)
-                          : Colors.orange,
+                          : applicationStatus.toLowerCase() == 'completed'
+                              ? Colors.blue
+                              : Colors.orange,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      status.toLowerCase() == 'draft'
-                          ? 'Draft'
-                          : 'Open/Ongoing',
+                      applicationStatus.toLowerCase() == 'shortlisted'
+                          ? 'Shortlisted'
+                          : applicationStatus.toLowerCase() == 'completed'
+                              ? 'Completed'
+                              : selectedTab == 'Active'
+                                  ? 'Active'
+                                  : 'Applied',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF2E7D32),
@@ -284,263 +299,108 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (selectedTab == 'Hourly' && payRate != null) ...[
+          if (startDatetime != 'N/A')
             Text(
-              'Pay Rate: $payRate',
+              'Start Date: $startDatetime',
               style: const TextStyle(
                 fontSize: 13,
                 color: Colors.black87,
               ),
             ),
-            if (shift != null)
-              Text(
-                'Shift: $shift',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                ),
-              ),
-            if (location != null)
-              Text(
-                'Location: $location',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                ),
-              ),
+          if (expectedCost != null)
             Text(
-              'Applicants: $applicants',
+              'Expected Cost: $expectedCost',
               style: const TextStyle(
                 fontSize: 13,
                 color: Colors.black87,
               ),
             ),
-          ] else ...[
+          if (location != null && location.isNotEmpty)
             Text(
-              'Posted On: $postedDate',
+              'Location: $location',
               style: const TextStyle(
                 fontSize: 13,
-                color: Colors.black54,
+                color: Colors.black87,
               ),
             ),
+          if (shift != null && shift.isNotEmpty)
             Text(
-              'Applicants: $applicants',
+              'Shift: $shift',
               style: const TextStyle(
                 fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          if (payAmount != null && payAmount.isNotEmpty)
+            Text(
+              'Pay: $payAmount${payType != null ? ' ($payType)' : ''}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          if (shortlisted == 1)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Shortlisted',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          if (messageToEmployer != null && messageToEmployer.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Message: $messageToEmployer',
+              style: const TextStyle(
+                fontSize: 12,
                 color: Colors.black54,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (jobId != null) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to job details screen if needed
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (context) => JobDetailsScreen(jobId: jobId),
+                //   ),
+                // );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1B5E20),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                minimumSize: const Size(double.infinity, 0),
+              ),
+              child: const Text(
+                'View Details',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (!showEditDelete) ...[
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to applicants screen
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B5E20),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    child: const Text(
-                      'View Applicants',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (showEditDelete) ...[
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to edit job screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EditJobScreen(jobData: job),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B5E20),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    child: const Text(
-                      'Edit Job',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Show delete confirmation dialog
-                    _showDeleteDialog(context, job);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black87,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: const Text(
-                    'Delete',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
-    );
-  }
-
-  // Warning Dialog - Delete Job Confirmation
-  void _showDeleteDialog(BuildContext context, Map<String, dynamic> job) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          backgroundColor: const Color(0xFFF5E6B3),
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Warning Icon
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD32F2F),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFD32F2F).withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.priority_high,
-                    color: Colors.white,
-                    size: 50,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Title
-                const Text(
-                  'Warning',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-
-                // Message
-                const Text(
-                  'This action cannot be undone. Are you sure you want to delete this job?',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          // onDelete();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Delete Job',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

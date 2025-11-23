@@ -75,6 +75,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return methods.isNotEmpty ? _toMap(methods.first) : null;
   }
 
+  String _inferMethodType(Map<String, dynamic>? method) {
+    if (method == null) return 'METHOD';
+
+    // First try to get from explicit type fields
+    final explicitType = method['method_type'] ?? method['type'];
+    if (explicitType != null &&
+        explicitType.toString().toLowerCase() != 'upi') {
+      return explicitType.toString().toUpperCase();
+    }
+
+    // If type is missing or incorrectly set to 'upi', infer from details
+    final details = method['details'];
+    if (details is Map && details.isNotEmpty) {
+      if (details.containsKey('upi_id')) {
+        return 'UPI';
+      } else if (details.containsKey('bank_name') ||
+          (details.containsKey('account_number') &&
+              details.containsKey('ifsc'))) {
+        return 'BANK';
+      } else if (details.containsKey('card_number') ||
+          details.containsKey('token') ||
+          details.containsKey('last4')) {
+        return 'CARD';
+      } else if (details.containsKey('wallet_name') ||
+          details.containsKey('wallet_number')) {
+        return 'WALLET';
+      }
+    }
+
+    // Fallback to explicit type or default
+    return explicitType?.toString().toUpperCase() ?? 'METHOD';
+  }
+
   Color _statusColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'verified':
@@ -108,7 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onEdit,
   }) {
     final provider = method['provider']?.toString() ?? 'Unknown provider';
-    final methodType = method['method_type']?.toString().toUpperCase() ?? '';
+    final methodType = _inferMethodType(method);
     final verificationStatus =
         method['verification_status']?.toString() ?? 'unverified';
     final detailText = _buildDetailsText(method);
@@ -519,8 +552,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         final method = _getPrimaryMethod(methods);
         final provider = method?['provider']?.toString() ?? 'Unknown provider';
-        final methodType =
-            method?['method_type']?.toString().toUpperCase() ?? 'METHOD';
+        final methodType = _inferMethodType(method);
         final verificationStatus =
             method?['verification_status']?.toString() ?? 'unverified';
         final detailsText = _buildDetailsText(method);
@@ -616,7 +648,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPaymentMethodDialog({Map<String, dynamic>? existingMethod}) {
+  Future<void> _showPaymentMethodDialog(
+      {Map<String, dynamic>? existingMethod}) async {
     if (_currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -636,6 +669,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final upiIdController = TextEditingController(
       text: methodDetails['upi_id']?.toString() ?? '',
     );
+    final bankNameController = TextEditingController(
+      text: methodDetails['bank_name']?.toString() ?? '',
+    );
     final accountNumberController = TextEditingController(
       text: methodDetails['account_number']?.toString() ?? '',
     );
@@ -645,24 +681,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final accountHolderController = TextEditingController(
       text: methodDetails['account_holder']?.toString() ?? '',
     );
+    final cardNumberController = TextEditingController(
+      text: methodDetails['card_number']?.toString() ?? '',
+    );
+    final last4Controller = TextEditingController(
+      text: methodDetails['last4']?.toString() ?? '',
+    );
+    final expiryController = TextEditingController(
+      text: methodDetails['expiry']?.toString() ?? '',
+    );
+    final cardTokenController = TextEditingController(
+      text: methodDetails['token']?.toString() ?? '',
+    );
+    final walletNameController = TextEditingController(
+      text: methodDetails['wallet_name']?.toString() ?? '',
+    );
+    final walletNumberController = TextEditingController(
+      text: methodDetails['wallet_number']?.toString() ?? '',
+    );
 
     bool isPrimary = existingMethod?['is_primary'] == true;
-    String methodType =
-        (existingMethod?['method_type'] ?? existingMethod?['type'] ?? 'upi')
-            .toString()
-            .toLowerCase();
+    String methodType = _inferMethodType(existingMethod).toLowerCase();
+    if (methodType == 'method') {
+      methodType = 'upi'; // Default fallback
+    }
     bool isSubmitting = false;
     String? errorMessage;
+    bool useCardToken = methodDetails['token'] != null &&
+        methodDetails['token'].toString().isNotEmpty;
 
     Future<void> closeControllers() async {
       providerController.dispose();
       upiIdController.dispose();
+      bankNameController.dispose();
       accountNumberController.dispose();
       ifscController.dispose();
       accountHolderController.dispose();
+      cardNumberController.dispose();
+      last4Controller.dispose();
+      expiryController.dispose();
+      cardTokenController.dispose();
+      walletNameController.dispose();
+      walletNumberController.dispose();
     }
 
-    showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
@@ -687,17 +750,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return;
                 }
                 details = {'upi_id': upiId};
-              } else {
+              } else if (methodType == 'bank') {
+                final bankName = bankNameController.text.trim();
                 final accountNumber = accountNumberController.text.trim();
                 final ifsc = ifscController.text.trim();
-                if (accountNumber.isEmpty || ifsc.isEmpty) {
+                if (bankName.isEmpty || accountNumber.isEmpty || ifsc.isEmpty) {
                   setState(() {
                     errorMessage =
-                        'Account number and IFSC are required for bank accounts.';
+                        'Bank name, account number and IFSC are required for bank accounts.';
                   });
                   return;
                 }
                 details = {
+                  'bank_name': bankName,
                   'account_number': accountNumber,
                   'ifsc': ifsc,
                 };
@@ -705,6 +770,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (holder.isNotEmpty) {
                   details['account_holder'] = holder;
                 }
+              } else if (methodType == 'card') {
+                if (useCardToken) {
+                  final token = cardTokenController.text.trim();
+                  if (token.isEmpty) {
+                    setState(() {
+                      errorMessage = 'Card token is required.';
+                    });
+                    return;
+                  }
+                  details = {'token': token};
+                } else {
+                  final cardNumber = cardNumberController.text.trim();
+                  final last4 = last4Controller.text.trim();
+                  final expiry = expiryController.text.trim();
+                  if (cardNumber.isEmpty || last4.isEmpty || expiry.isEmpty) {
+                    setState(() {
+                      errorMessage =
+                          'Card number, last 4 digits, and expiry are required.';
+                    });
+                    return;
+                  }
+                  details = {
+                    'card_number': cardNumber,
+                    'last4': last4,
+                    'expiry': expiry,
+                  };
+                }
+              } else if (methodType == 'wallet') {
+                final walletName = walletNameController.text.trim();
+                final walletNumber = walletNumberController.text.trim();
+                if (walletName.isEmpty || walletNumber.isEmpty) {
+                  setState(() {
+                    errorMessage =
+                        'Wallet name and wallet number are required.';
+                  });
+                  return;
+                }
+                details = {
+                  'wallet_name': walletName,
+                  'wallet_number': walletNumber,
+                };
+              } else {
+                setState(() {
+                  errorMessage = 'Invalid payment method type.';
+                });
+                return;
               }
 
               Future<void> submitFuture() async {
@@ -785,6 +896,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           value: 'bank',
                           child: Text('Bank Account'),
                         ),
+                        DropdownMenuItem(
+                          value: 'card',
+                          child: Text('Card'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'wallet',
+                          child: Text('Wallet'),
+                        ),
                       ],
                       onChanged: isSubmitting
                           ? null
@@ -793,6 +912,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               setState(() {
                                 methodType = value;
                                 errorMessage = null;
+                                if (value == 'card') {
+                                  useCardToken = false;
+                                }
                               });
                             },
                     ),
@@ -800,9 +922,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     TextField(
                       controller: providerController,
                       enabled: !isSubmitting,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Provider',
-                        hintText: 'e.g., PhonePe, Paytm',
+                        hintText: methodType == 'upi'
+                            ? 'e.g., Google Pay, PhonePe'
+                            : methodType == 'bank'
+                                ? 'e.g., SBI, HDFC'
+                                : methodType == 'card'
+                                    ? 'e.g., Visa, Mastercard, Razorpay'
+                                    : 'e.g., Paytm Wallet',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -815,7 +943,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           hintText: 'example@bank',
                         ),
                       )
-                    else ...[
+                    else if (methodType == 'bank') ...[
+                      TextField(
+                        controller: bankNameController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Bank Name',
+                          hintText: 'e.g., State Bank of India',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: accountHolderController,
                         enabled: !isSubmitting,
@@ -840,6 +977,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           labelText: 'IFSC Code',
                         ),
                         textCapitalization: TextCapitalization.characters,
+                      ),
+                    ] else if (methodType == 'card') ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Use tokenized card'),
+                        value: useCardToken,
+                        onChanged: isSubmitting
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  useCardToken = value;
+                                  errorMessage = null;
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 12),
+                      if (useCardToken)
+                        TextField(
+                          controller: cardTokenController,
+                          enabled: !isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Card Token',
+                            hintText: 'tok_9f3d98df93dd',
+                          ),
+                        )
+                      else ...[
+                        TextField(
+                          controller: cardNumberController,
+                          enabled: !isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Card Number',
+                            hintText: '4111111111111111',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: last4Controller,
+                          enabled: !isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Last 4 Digits',
+                            hintText: '1111',
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 4,
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: expiryController,
+                          enabled: !isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Expiry Date',
+                            hintText: '12/27',
+                          ),
+                        ),
+                      ],
+                    ] else if (methodType == 'wallet') ...[
+                      TextField(
+                        controller: walletNameController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Wallet Name',
+                          hintText: 'e.g., Paytm',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: walletNumberController,
+                        enabled: !isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Wallet Number',
+                          hintText: '9876543210',
+                        ),
+                        keyboardType: TextInputType.number,
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -892,7 +1103,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         );
       },
-    ).whenComplete(closeControllers);
+    );
+
+    await closeControllers();
   }
 }
 

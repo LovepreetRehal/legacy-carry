@@ -66,6 +66,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return id.isEmpty ? null : id;
   }
 
+  String? _extractResidentId(Map<String, dynamic> data) {
+    final dynamic residentValue = data['resident_id'] ??
+        data['resident']?['id'] ??
+        data['user_id'] ??
+        data['user']?['id'];
+    if (residentValue == null) return null;
+    final id = residentValue.toString();
+    return id.isEmpty ? null : id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> jobData = _jobData;
@@ -732,10 +742,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return;
     }
 
+    final residentId = _extractResidentId(_jobData) ?? '';
+    if (residentId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Resident information not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => ApplyForJobScreen(jobId: jobId),
+        builder: (context) =>
+            ApplyForJobScreen(jobId: jobId, residentId: residentId),
       ),
     );
 

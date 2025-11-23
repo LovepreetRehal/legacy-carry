@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'services/auth_service.dart';
 
@@ -72,39 +73,70 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
 
   Future<void> _pickFile(String documentType) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: documentType == 'Verification Photo'
-            ? FileType.image
-            : FileType.custom,
-        allowedExtensions: documentType == 'Verification Photo'
-            ? null
-            : ['pdf', 'jpg', 'jpeg', 'png'],
-        allowMultiple: false,
-      );
+      // For Verification Photo, use camera only
+      if (documentType == 'Verification Photo') {
+        final ImagePicker picker = ImagePicker();
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 85,
+        );
 
-      if (result != null && result.files.isNotEmpty) {
-        PlatformFile file = result.files.first;
-
-        // Update state with selected file
-        setState(() {
-          switch (documentType) {
-            case 'ID Proof':
-              idProofFile = file;
-              idProofUploaded = false;
-              break;
-            case 'Address Proof':
-              addressProofFile = file;
-              addressProofUploaded = false;
-              break;
-            case 'Verification Photo':
-              verificationPhotoFile = file;
-              verificationPhotoUploaded = false;
-              break;
+        if (image != null) {
+          final file = File(image.path);
+          if (!await file.exists()) {
+            if (mounted) {
+              _showErrorDialog('Captured image file not found.');
+            }
+            return;
           }
-        });
 
-        // Upload the file immediately after selection
-        await _uploadFile(documentType, file);
+          // Create a PlatformFile object for consistency with existing code
+          // Note: PlatformFile constructor may vary by package version
+          // We only need path for upload, so we create a minimal object
+          final fileSize = await file.length();
+          final platformFile = PlatformFile(
+            name: image.name,
+            path: image.path,
+            size: fileSize,
+          );
+
+          // Update state with selected file
+          setState(() {
+            verificationPhotoFile = platformFile;
+            verificationPhotoUploaded = false;
+          });
+
+          // Upload the file immediately after selection
+          await _uploadFile(documentType, platformFile);
+        }
+      } else {
+        // For other documents, use file picker
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+          allowMultiple: false,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          PlatformFile file = result.files.first;
+
+          // Update state with selected file
+          setState(() {
+            switch (documentType) {
+              case 'ID Proof':
+                idProofFile = file;
+                idProofUploaded = false;
+                break;
+              case 'Address Proof':
+                addressProofFile = file;
+                addressProofUploaded = false;
+                break;
+            }
+          });
+
+          // Upload the file immediately after selection
+          await _uploadFile(documentType, file);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -124,11 +156,12 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
       }
 
       // Convert PlatformFile to File
-      if (platformFile.path == null) {
+      final filePath = platformFile.path;
+      if (filePath == null || filePath.isEmpty) {
         _showErrorDialog('File path is not available.');
         return;
       }
-      final file = File(platformFile.path!);
+      final file = File(filePath);
       if (!await file.exists()) {
         _showErrorDialog('Selected file does not exist.');
         return;

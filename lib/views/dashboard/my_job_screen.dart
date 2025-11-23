@@ -26,12 +26,13 @@ class _MyJobsContent extends StatefulWidget {
 class _MyJobsContentState extends State<_MyJobsContent>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Set<int> _publishingJobIds = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-        length: 3, vsync: this); // active, upcoming, and completed tabs
+    _tabController =
+        TabController(length: 3, vsync: this); // active, draft, completed tabs
   }
 
   @override
@@ -104,7 +105,7 @@ class _MyJobsContentState extends State<_MyJobsContent>
                   unselectedLabelColor: Colors.black,
                   tabs: const [
                     Tab(text: "Active"),
-                    Tab(text: "Upcoming"),
+                    Tab(text: "Drafts"),
                     Tab(text: "Completed"),
                   ],
                 ),
@@ -136,10 +137,12 @@ class _MyJobsContentState extends State<_MyJobsContent>
                         : TabBarView(
                             controller: _tabController,
                             children: [
-                              _buildJobList(viewModel.activeJobs, "active"),
-                              _buildJobList(viewModel.upcomingJobs, "upcoming"),
                               _buildJobList(
-                                  viewModel.completedJobs, "completed"),
+                                  viewModel, viewModel.activeJobs, "active"),
+                              _buildJobList(
+                                  viewModel, viewModel.draftJobs, "draft"),
+                              _buildJobList(viewModel, viewModel.completedJobs,
+                                  "completed"),
                             ],
                           ),
               ),
@@ -150,7 +153,55 @@ class _MyJobsContentState extends State<_MyJobsContent>
     );
   }
 
-  Widget _buildJobList(List<dynamic> jobs, String type) {
+  Future<void> _handlePublish(
+      MyJobsViewModel viewModel, Map<String, dynamic> job) async {
+    final jobId = job['id'];
+    if (jobId is! int) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid job id. Please try again.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _publishingJobIds.add(jobId);
+    });
+
+    try {
+      await viewModel.publishDraftJob(jobId);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            title: const Text('Success'),
+            content: const Text('Job published successfully.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _publishingJobIds.remove(jobId);
+      });
+    }
+  }
+
+  Widget _buildJobList(
+      MyJobsViewModel viewModel, List<dynamic> jobs, String type) {
     if (jobs.isEmpty) {
       return Center(
         child: Column(
@@ -179,12 +230,13 @@ class _MyJobsContentState extends State<_MyJobsContent>
       itemCount: jobs.length,
       itemBuilder: (context, index) {
         var job = jobs[index];
-        return _buildJobCard(job, type);
+        return _buildJobCard(context, viewModel, job, type);
       },
     );
   }
 
-  Widget _buildJobCard(Map<String, dynamic> job, String type) {
+  Widget _buildJobCard(BuildContext context, MyJobsViewModel viewModel,
+      Map<String, dynamic> job, String type) {
     final jobTitle = job['job_title'] ?? 'No Title';
     final location = job['location'] ?? 'Unknown Location';
     final address = job['address'] ?? '';
@@ -201,7 +253,7 @@ class _MyJobsContentState extends State<_MyJobsContent>
         final date = DateTime.parse(startDate);
         formattedDate = '${date.day}/${date.month}/${date.year}';
       } catch (e) {
-        formattedDate = startDate.split('T')[0]; 
+        formattedDate = startDate.split('T')[0];
       }
     }
 
@@ -220,6 +272,11 @@ class _MyJobsContentState extends State<_MyJobsContent>
       default:
         statusColor = Colors.grey;
     }
+
+    final jobId = job['id'];
+    final bool isDraft = type == "draft";
+    final bool isPublishing =
+        jobId is int ? _publishingJobIds.contains(jobId) : false;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -334,44 +391,99 @@ class _MyJobsContentState extends State<_MyJobsContent>
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: status == "active"
-                    ? Colors.green
-                    : status == "completed"
-                        ? Colors.blue
-                        : Colors.orange,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              ),
-              onPressed: () {
-                if (status == "active") {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ViewJobScreen(jobData: job),
+            child: isDraft
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditJobScreen(jobData: job),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Edit Job",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                          onPressed: isPublishing
+                              ? null
+                              : () => _handlePublish(viewModel, job),
+                          child: isPublishing
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  "Publish",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                    ],
+                  )
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: status == "active"
+                          ? Colors.green
+                          : status == "completed"
+                              ? Colors.blue
+                              : Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
                     ),
-                  );
-                } else if (type == "upcoming") {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditJobScreen(jobData: job),
+                    onPressed: () {
+                      if (status == "active") {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ViewJobScreen(jobData: job),
+                          ),
+                        );
+                      } else if (type == "draft") {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditJobScreen(jobData: job),
+                          ),
+                        );
+                      }
+                      // You can add similar logic for completed cases if needed
+                    },
+                    child: Text(
+                      status == "active"
+                          ? "View Details"
+                          : status == "completed"
+                              ? "View Report"
+                              : "Edit Job",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  );
-                }
-                // You can add similar logic for completed cases if needed
-              },
-              child: Text(
-                status == "active"
-                    ? "View Details"
-                    : status == "completed"
-                        ? "View Report"
-                        : "Edit Job",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+                  ),
           )
         ],
       ),
