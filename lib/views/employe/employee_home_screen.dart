@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:legacy_carry/views/viewmodels/get_job_viewmodel.dart';
 import 'package:legacy_carry/views/providers/user_profile_provider.dart';
+import '../dashboard/messages_screen.dart';
+import '../dashboard/search_screen.dart';
 import 'job_detail_screen.dart';
+import 'my_jobs_employee_screen.dart';
 
 class EmployeeHomeScreen extends StatelessWidget {
   const EmployeeHomeScreen({super.key});
@@ -91,12 +94,33 @@ class EmployeeHomeScreen extends StatelessWidget {
                             _buildGreenMenu(
                               icon: Icons.search,
                               label: "Find Jobs",
-                              onTap: () {},
+                              onTap: () {
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        SearchJobsScreen(),
+                                  ),
+                                );
+
+
+                              },
                             ),
                             _buildGreenMenu(
                               icon: Icons.work_outline,
                               label: "My Jobs",
-                              onTap: () {},
+                              onTap: () {
+
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        FindMyJobsScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -105,12 +129,22 @@ class EmployeeHomeScreen extends StatelessWidget {
                             _buildGreenMenu(
                               icon: Icons.attach_money,
                               label: "Earnings",
-                              onTap: () {},
+                              onTap: () {
+                              },
                             ),
                             _buildGreenMenu(
                               icon: Icons.message_outlined,
                               label: "Messages",
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        MessagesScreen(),
+                                  ),
+                                );
+
+                              },
                             ),
                           ],
                         ),

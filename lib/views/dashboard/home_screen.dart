@@ -79,7 +79,9 @@ class HomeScreen extends StatelessWidget {
                         ),
                         icon: const Icon(Icons.search, color: Colors.white),
                         label: const Text("Find Jobs"),
-                        onPressed: () {},
+                        onPressed: () {
+
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),

@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-<<<<<<< HEAD
 
   # Firebase (matching versions)
   firebase_core: ^2.32.0
@@ -39,9 +38,7 @@ dependencies:
   firebase_storage: ^11.6.0
 
   # Other packages
-=======
-  firebase_core: 2.32.0  # (use latest version)
->>>>>>> 086d87b0a0ecd39fa3d46c1cbe1e8f481569abfd
+
   google_fonts: ^6.2.1
   provider: ^6.1.1
   shared_preferences: ^2.1.1

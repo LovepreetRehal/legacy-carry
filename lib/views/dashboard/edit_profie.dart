@@ -246,17 +246,31 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         elevation: 0,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
-        //   onPressed: () => Navigator.pop(context),
-        // ),
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+
         title: const Text(
           "Edit Profile",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        centerTitle: true,
+
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFDFB139),
+                Color(0xFFB9AE3C),
+                // Color(0xFF3CA349),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Container(
         width: double.infinity,

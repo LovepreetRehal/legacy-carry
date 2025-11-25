@@ -101,6 +101,8 @@ class _MyJobsContentState extends State<_MyJobsContent>
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  indicatorSize: TabBarIndicatorSize.tab,   // ⭐ FULL WIDTH SELECTED TAB
+                  indicatorPadding: EdgeInsets.zero,        // ⭐ REMOVE EXTRA SPACING
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.black,
                   tabs: const [

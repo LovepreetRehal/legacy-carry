@@ -403,6 +403,7 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
     final bool canUploadOrReplace = !isUploaded || isRejectedStatus;
 
     return Container(
+      width: double.infinity,   // ⭐ ADD THIS LINE
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(.9),
