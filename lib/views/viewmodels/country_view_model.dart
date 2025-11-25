@@ -128,6 +128,49 @@ class CountryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchSocietiesByCity(int cityId) async {
+    isLoadingSocieties = true;
+    societies = [];
+    notifyListeners();
+
+    try {
+      final url = Uri.parse('$baseUrl/societies-by-cities/$cityId');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) {
+          societies = List<Map<String, dynamic>>.from(
+            data.map((item) => Map<String, dynamic>.from(item)),
+          );
+        } else if (data is Map<String, dynamic>) {
+          final payload = data['societies'] ?? data['data'];
+          if (payload is List) {
+            societies = List<Map<String, dynamic>>.from(
+              payload.map((item) => Map<String, dynamic>.from(item)),
+            );
+          } else {
+            debugPrint(
+                '❌ Unexpected societies payload for city $cityId: ${response.body}');
+          }
+        }
+      } else {
+        debugPrint(
+            '❌ Failed to fetch societies for city $cityId: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching societies for city $cityId: $e');
+    }
+
+    isLoadingSocieties = false;
+    notifyListeners();
+  }
+
+  void clearSocieties() {
+    societies = [];
+    notifyListeners();
+  }
+
   String? _lastSocietyError;
 
   String? get lastSocietyError => _lastSocietyError;
@@ -138,6 +181,7 @@ class CountryViewModel extends ChangeNotifier {
     required String city,
     required String state,
     required String pincode,
+    required int cityId,
   }) async {
     _lastSocietyError = null;
     final url = Uri.parse('$baseUrl/societies-create');
@@ -151,6 +195,7 @@ class CountryViewModel extends ChangeNotifier {
           'city': city,
           'state': state,
           'pincode': pincode,
+          'city_id': cityId,
         }),
       );
 

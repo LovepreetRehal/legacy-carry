@@ -36,6 +36,8 @@ class _CompleteProfileScreen extends StatefulWidget {
 }
 
 class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
+  static const String _createSocietyOptionLabel = "Create your own society";
+
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
@@ -43,6 +45,12 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   final villageController = TextEditingController();
   final List<TextEditingController> otpControllers =
       List.generate(6, (_) => TextEditingController());
+  final TextEditingController customSocietyNameController =
+      TextEditingController();
+  final TextEditingController customSocietyAddressController =
+      TextEditingController();
+  final TextEditingController customSocietyPincodeController =
+      TextEditingController();
 
   String? selectedResidentialStatus;
   String? selectedPaymentMethod;
@@ -53,6 +61,7 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   String? selectedDistrict = "Patiala";
   int? selectedCountryId;
   int? selectedStateId;
+  int? selectedCityId;
   int? selectedSocietyId;
 
   final residentialOptions = ["Society", "Individual", "Commercial"];
@@ -71,6 +80,9 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
     villageController.dispose();
     countrySearchController.dispose();
     countryDisplayController.dispose();
+    customSocietyNameController.dispose();
+    customSocietyAddressController.dispose();
+    customSocietyPincodeController.dispose();
     for (var controller in otpControllers) {
       controller.dispose();
     }
@@ -271,7 +283,8 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
     if (selectedResidentialStatus == "Society" && selectedSociety != null) {
       // Validate dependent fields
       if ((selectedCity == null || selectedCity!.isEmpty) ||
-          (selectedState == null || selectedState!.isEmpty)) {
+          (selectedState == null || selectedState!.isEmpty) ||
+          selectedCityId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
@@ -288,6 +301,7 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
         city: selectedCity!,
         state: selectedState!,
         pincode: "123456", // you can make this dynamic if needed
+        cityId: selectedCityId!,
       );
 
       if (!success) {
@@ -426,6 +440,174 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
+    }
+  }
+
+  Future<void> _showCreateSocietyDialog(CountryViewModel viewModel) async {
+    if (selectedCityId == null ||
+        selectedCity == null ||
+        selectedState == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Select state and city before creating a society"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    customSocietyNameController.text = selectedSociety ?? '';
+    customSocietyAddressController.text = villageController.text;
+    customSocietyPincodeController.clear();
+
+    bool? created;
+    String? newlyCreatedName;
+
+    bool isSubmitting = false;
+    String? dialogError;
+
+    created = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: const Text("Create Society"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: customSocietyNameController,
+                      decoration: const InputDecoration(
+                        labelText: "Society Name",
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: customSocietyAddressController,
+                      decoration: const InputDecoration(
+                        labelText: "Address",
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: customSocietyPincodeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Pincode",
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "City: ${selectedCity!}\nState: ${selectedState!}",
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    if (dialogError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        dialogError!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final name = customSocietyNameController.text.trim();
+                          final address =
+                              customSocietyAddressController.text.trim();
+                          final pincode =
+                              customSocietyPincodeController.text.trim();
+
+                          if (name.isEmpty || address.isEmpty) {
+                            setDialogState(() {
+                              dialogError =
+                                  "Name and address are required fields.";
+                            });
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = true;
+                            dialogError = null;
+                          });
+
+                          final success = await viewModel.createSociety(
+                            name: name,
+                            address: address,
+                            city: selectedCity!,
+                            state: selectedState!,
+                            pincode: pincode.isEmpty ? "000000" : pincode,
+                            cityId: selectedCityId!,
+                          );
+
+                          if (success) {
+                            newlyCreatedName = name;
+                            Navigator.of(dialogContext).pop(true);
+                          } else {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              dialogError = viewModel.lastSocietyError ??
+                                  "Failed to create society";
+                            });
+                          }
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("Create"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (created == true) {
+      await viewModel.fetchSocietiesByCity(selectedCityId!);
+      Map<String, dynamic>? createdSociety;
+      if (newlyCreatedName != null) {
+        final match = viewModel.societies.firstWhere(
+          (s) => s['name'] == newlyCreatedName,
+          orElse: () => <String, dynamic>{},
+        );
+        if (match.isNotEmpty) {
+          createdSociety = match;
+        }
+      }
+
+      setState(() {
+        selectedSociety = newlyCreatedName;
+        selectedSocietyId =
+            createdSociety != null ? createdSociety['id'] : null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Society created successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 
@@ -728,7 +910,11 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                   selectedState = val;
                                   selectedStateId = state['id'];
                                   selectedCity = null;
+                                  selectedCityId = null;
+                                  selectedSociety = null;
+                                  selectedSocietyId = null;
                                 });
+                                viewModel.clearSocieties();
                                 viewModel.fetchCities(selectedStateId!);
                               },
                               decoration: const InputDecoration(
@@ -756,9 +942,22 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                     (n) => n.toLowerCase().contains(query));
                               },
                               onSelected: (String selection) {
+                                final city = viewModel.cities.firstWhere(
+                                  (c) => c['name'] == selection,
+                                  orElse: () => <String, dynamic>{},
+                                );
                                 setState(() {
                                   selectedCity = selection;
+                                  selectedCityId = city['id'];
+                                  selectedSociety = null;
+                                  selectedSocietyId = null;
                                 });
+                                if (selectedCityId != null) {
+                                  viewModel
+                                      .fetchSocietiesByCity(selectedCityId!);
+                                } else {
+                                  viewModel.clearSocieties();
+                                }
                               },
                               fieldViewBuilder: (context, controller, focusNode,
                                   onFieldSubmitted) {
@@ -801,17 +1000,31 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                     return uniqueList;
                                   },
                                 );
-                                final List<String> names = uniqueSocieties
+                                final List<String> filtered = uniqueSocieties
                                     .map<String>(
                                         (s) => (s['name'] ?? '').toString())
+                                    .where((name) =>
+                                        name.toLowerCase().contains(query))
                                     .toList();
-                                if (query.isEmpty) return names;
-                                return names.where(
-                                    (n) => n.toLowerCase().contains(query));
+
+                                if (query.isEmpty ||
+                                    _createSocietyOptionLabel
+                                        .toLowerCase()
+                                        .contains(query)) {
+                                  filtered.add(_createSocietyOptionLabel);
+                                }
+
+                                return filtered;
                               },
                               onSelected: (String selection) {
-                                final society = viewModel.societies
-                                    .firstWhere((s) => s['name'] == selection);
+                                if (selection == _createSocietyOptionLabel) {
+                                  _showCreateSocietyDialog(viewModel);
+                                  return;
+                                }
+                                final society = viewModel.societies.firstWhere(
+                                  (s) => s['name'] == selection,
+                                  orElse: () => <String, dynamic>{},
+                                );
                                 setState(() {
                                   selectedSociety = selection;
                                   selectedSocietyId = society['id'];
