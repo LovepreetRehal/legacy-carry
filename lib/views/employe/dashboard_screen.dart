@@ -21,7 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const EmployeeHomeScreen(),
     const SearchJobsScreen(),
     const FindMyJobsScreen(),
-    const MessagesScreen(),
+    MessagesScreen(),
     const SettingsScreen(),
     const EditProfileScreen(),
     // const Center(child: Text("Profile Page")),

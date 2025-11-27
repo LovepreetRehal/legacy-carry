@@ -21,7 +21,7 @@ class _ResidentDashboardScreen extends State<ResidentDashboardScreen> {
     const ResidentHomeScreen(), // Show resident's own dashboard
     const SearchJobsScreen(),
     const MyJobsScreen(),
-    const MessagesScreen(),
+     MessagesScreen(),
     const SettingsScreen(),
     const EditProfileScreen(),
     // const Center(child: Text("Profile Page")),

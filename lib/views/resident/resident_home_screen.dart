@@ -75,6 +75,13 @@ class ResidentHomeScreen extends StatelessWidget {
                   children: [
                     _buildActionButton(context, "Post Job", Icons.post_add),
                     _buildActionButton(context, "Find Labor", Icons.search),
+
+                  ],
+                ),    // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+
                     _buildActionButton(context, "Messages", Icons.message),
                     _buildActionButton(context, "Payments", Icons.payment),
                   ],
@@ -199,7 +206,7 @@ class ResidentHomeScreen extends StatelessWidget {
               // Placeholder: You can implement navigation for other buttons as desired
             }
           },
-          icon: Icon(icon, size: 14, color: Colors.black87),
+          icon: Icon(icon, size: 18, color: Colors.black87),
           label: Text(
             label,
             style: const TextStyle(color: Colors.black87),

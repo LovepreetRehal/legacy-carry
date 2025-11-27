@@ -324,69 +324,76 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-                if (isFetchingDocuments)
-                  const LinearProgressIndicator(
-                    backgroundColor: Colors.black12,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
-                  ),
-                if (fetchDocumentsError != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  if (isFetchingDocuments)
+                    const LinearProgressIndicator(
+                      backgroundColor: Colors.black12,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            fetchDocumentsError!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 13,
+                  if (fetchDocumentsError != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              fetchDocumentsError!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: isFetchingDocuments
-                              ? null
-                              : () => _loadUploadedDocuments(),
-                          child: const Text('Retry'),
-                        )
-                      ],
+                          TextButton(
+                            onPressed: isFetchingDocuments
+                                ? null
+                                : () => _loadUploadedDocuments(),
+                            child: const Text('Retry'),
+                          )
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+                  _documentCard(
+                      "ID Proof",
+                      "Upload Aadhaar, PAN, Passport etc.",
+                      idProofFile,
+                      isUploadingIdProof,
+                      idProofUploaded,
+                      existingDocument: _getDocumentDataForTitle("ID Proof")),
+                  const SizedBox(height: 15),
+                  _documentCard(
+                      "Address Proof",
+                      "Upload utility bill, rental agreement etc.",
+                      addressProofFile,
+                      isUploadingAddressProof,
+                      addressProofUploaded,
+                      existingDocument:
+                          _getDocumentDataForTitle("Address Proof")),
+                  const SizedBox(height: 15),
+                  _documentCard(
+                      "Verification Photo",
+                      "Upload a clear passport - size photo",
+                      verificationPhotoFile,
+                      isUploadingVerificationPhoto,
+                      verificationPhotoUploaded,
+                      existingDocument:
+                          _getDocumentDataForTitle("Verification Photo")),
                 ],
-                _documentCard("ID Proof", "Upload Aadhaar, PAN, Passport etc.",
-                    idProofFile, isUploadingIdProof, idProofUploaded,
-                    existingDocument: _getDocumentDataForTitle("ID Proof")),
-                const SizedBox(height: 15),
-                _documentCard(
-                    "Address Proof",
-                    "Upload utility bill, rental agreement etc.",
-                    addressProofFile,
-                    isUploadingAddressProof,
-                    addressProofUploaded,
-                    existingDocument:
-                        _getDocumentDataForTitle("Address Proof")),
-                const SizedBox(height: 15),
-                _documentCard(
-                    "Verification Photo",
-                    "Upload a clear passport - size photo",
-                    verificationPhotoFile,
-                    isUploadingVerificationPhoto,
-                    verificationPhotoUploaded,
-                    existingDocument:
-                        _getDocumentDataForTitle("Verification Photo")),
-              ],
+              ),
             ),
           ),
         ),
@@ -403,7 +410,7 @@ class _ManageDocumentsScreenState extends State<ManageDocumentsScreen> {
     final bool canUploadOrReplace = !isUploaded || isRejectedStatus;
 
     return Container(
-      width: double.infinity,   // ⭐ ADD THIS LINE
+      width: double.infinity, // ⭐ ADD THIS LINE
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(.9),

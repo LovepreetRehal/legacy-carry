@@ -437,7 +437,7 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                                   backgroundColor: const Color(0xFF2E7D32),
                                   foregroundColor: Colors.white,
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                                      const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -445,8 +445,11 @@ class _ViewJobScreenState extends State<ViewJobScreen> {
                                 ),
                                 child: const Text(
                                   'View Applicants',
+                                  maxLines: 1,
+
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
+
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

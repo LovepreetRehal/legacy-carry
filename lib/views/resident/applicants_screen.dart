@@ -59,21 +59,18 @@ class _ApplicantsScreenState extends State<ApplicantsScreen> {
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 5),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black, width: 1.5),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          "Applicants",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+
+                        child: const Center(
+                          child: Text(
+                            "Applicants",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
-                      )
-                    ],
+                      )                    ],
                   ),
                 ),
 

@@ -31,7 +31,7 @@ class AppRoutes {
     // Dashboard Screens
     '/home': (context) => const HomeScreen(),
     '/edit_profile': (context) => const EditProfileScreen(),
-    '/messages': (context) => const MessagesScreen(),
+    '/messages': (context) =>  MessagesScreen(),
     '/my_jobs': (context) => const MyJobsScreen(),
     '/search': (context) => const SearchJobsScreen(),
     '/settings': (context) => const SettingsScreen(),

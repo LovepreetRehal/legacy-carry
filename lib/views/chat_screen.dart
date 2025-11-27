@@ -46,7 +46,7 @@ class _ChatScreenState extends State<ChatScreen> {
       chatId: widget.chatId,
       text: text,
       senderId: widget.myId,
-      senderName: widget.myName,
+      senderName: widget.myName, receiverId: '2',
     );
     _messageController.clear();
     setState(() => _sending = false);
@@ -67,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
       chatId: widget.chatId,
       file: file,
       senderId: widget.myId,
-      senderName: widget.myName,
+      senderName: widget.myName, receiverId: '2',
     );
     setState(() => _sending = false);
     // _scrollToBottom();
@@ -89,7 +89,7 @@ class _ChatScreenState extends State<ChatScreen> {
       chatId: widget.chatId,
       file: file,
       senderId: widget.myId,
-      senderName: widget.myName,
+      senderName: widget.myName, receiverId: '2',
     );
     setState(() => _sending = false);
     _scrollToBottom();

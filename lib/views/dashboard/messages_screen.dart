@@ -1,36 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
 import '../chat_screen.dart';
+import '../services/chat_service.dart';
 
 class MessagesScreen extends StatelessWidget {
-  const MessagesScreen({super.key});
+  final String myId = "4"; // your user id
+  final ChatService chatService = ChatService();
+
+  MessagesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Static data commented out
-    final List<Map<String, dynamic>> messages = [
-      {
-        'name': 'Rahul Sharma',
-        'message': 'Hey, did you Reach?',
-        'time': '10:32 am',
-        'unread': 2,
-      },
-      {
-        'name': 'Amit Kumar',
-        'message': 'Typing.....',
-        'time': '09:41 am',
-        'unread': 0,
-      },
-      {
-        'name': 'Priya Mehta',
-        'message': 'Okay',
-        'time': '08:32 am',
-        'unread': 1,
-      },
-    ];
-
-    // final List<Map<String, dynamic>> messages = [];
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -43,138 +23,105 @@ class MessagesScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Top Bar
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    /*IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),*/
-                    const Text(
-                      "Messages",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.search, color: Colors.white),
-                    ),
+                  children: const [
+                    Text("Messages",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    Icon(Icons.search, color: Colors.white),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 8),
-
-              // Messages Card Container
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Messages",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  child: messages.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.message_outlined,
-                                size: 64,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No messages yet',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => _addTestData(context),
+                        icon: const Icon(Icons.add, color: Colors.white),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.search, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              Expanded(
+                child: StreamBuilder(
+                  stream: chatService.getUserChatRooms(myId),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final chats = snapshot.data!;
+
+                    if (chats.isEmpty) {
+                      return const Center(
+                          child: Text("No messages",
+                              style: TextStyle(color: Colors.white)));
+                    }
+
+                    return ListView.builder(
+                      itemCount: chats.length,
+                      itemBuilder: (context, i) {
+                        final chat = chats[i];
+                        final name = chat['name'];
+                        final img = chat['image'];
+                        final lastMsg = chat['lastMessage'];
+                        final time = chat['lastMessageTime'] == null
+                            ? ""
+                            : _formatTime(chat['lastMessageTime'].toDate());
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: img.isEmpty
+                                ? null
+                                : NetworkImage(img),
+                            child: img.isEmpty
+                                ? const Icon(Icons.person)
+                                : null,
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[index];
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.white,
-                                child: Icon(Icons.person,
-                                    color: Colors.green[800]),
-                              ),
-                              title: Text(
-                                msg['name'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                          title: Text(name,
+                              style:
+                              const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(lastMsg),
+                          trailing: Text(time),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  chatId: chat['chatId'],
+                                  myId: myId,
+                                  myName: "Lovepreet",
+                                  otherName: name,
                                 ),
                               ),
-                              subtitle: Text(
-                                msg['message'],
-                                style: TextStyle(
-                                  color: msg['message'].contains('Typing')
-                                      ? Colors.green
-                                      : Colors.black54,
-                                  fontStyle: msg['message'].contains('Typing')
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                ),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    msg['time'],
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black87),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  if (msg['unread'] > 0)
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.green,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        msg['unread'].toString(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              onTap: () {
-                                // TODO: Navigate to chat screen
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ChatScreen(chatId: '12', myId: '10', myName: 'Lovepreet', otherName: 'Sukh',),
-                                  ),
-                                );
-
-                              },
                             );
                           },
-                        ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ],
@@ -183,4 +130,98 @@ class MessagesScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _formatTime(DateTime t) {
+    return "${t.hour}:${t.minute.toString().padLeft(2, '0')}";
+  }
+
+  void _addTestData(BuildContext context) async {
+    final FirebaseFirestore db = FirebaseFirestore.instance;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Adding Test Data...")),
+    );
+
+    try {
+      /// ---------------- USERS ----------------
+      await db.collection("users").doc("2").set({
+        "name": "Rahul Sharma",
+        "image": "",
+      });
+
+      await db.collection("users").doc("5").set({
+        "name": "Amit Kumar",
+        "image": "",
+      });
+
+      await db.collection("users").doc("7").set({
+        "name": "Reet pagl ",
+        "image": "",
+      });
+
+      /// ---------------- CHAT ROOMS ----------------
+      List<Map<String, dynamic>> chatRooms = [
+        {
+          "chatId": "4_2",
+          "otherId": "2",
+          "lastMessage": "Hey Lovepreet, reached?",
+          "lastMessageTime": FieldValue.serverTimestamp(),
+        },
+        {
+          "chatId": "4_5",
+          "otherId": "5",
+          "lastMessage": "Typing...",
+          "lastMessageTime": FieldValue.serverTimestamp(),
+        },
+        {
+          "chatId": "4_7",
+          "otherId": "7",
+          "lastMessage": "Okay 👍",
+          "lastMessageTime": FieldValue.serverTimestamp(),
+        },
+      ];
+
+      for (var room in chatRooms) {
+        await db.collection("chats").doc(room["chatId"]).set({
+          "users": ["4", room["otherId"]],
+          "lastMessage": room["lastMessage"],
+          "lastMessageTime": room["lastMessageTime"],
+        });
+
+        /// Add sample messages inside chat
+        await db
+            .collection("chats")
+            .doc(room["chatId"])
+            .collection("messages")
+            .add({
+          "senderId": "4",
+          "senderName": "Lovepreet",
+          "text": "Hello ${room["otherId"]}",
+          "type": "text",
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+
+        await db
+            .collection("chats")
+            .doc(room["chatId"])
+            .collection("messages")
+            .add({
+          "senderId": room["otherId"],
+          "senderName": "Test User",
+          "text": room["lastMessage"],
+          "type": "text",
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Test Data Added Successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+
 }

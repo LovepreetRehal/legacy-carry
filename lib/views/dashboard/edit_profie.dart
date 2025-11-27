@@ -402,7 +402,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                                     final baseUrl =
                                         _authService.baseUrlWithoutApi;
                                     existingAvatarUrl =
-                                        '$baseUrl/$existingAvatarUrl';
+                                        '$baseUrl/storage/$existingAvatarUrl';
                                   }
                                 }
 
