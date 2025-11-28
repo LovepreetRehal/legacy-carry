@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../chat_screen.dart';
 import '../services/auth_service.dart';
+import '../services/chat_service.dart';
 import 'apply_for_job_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
@@ -14,10 +16,12 @@ class JobDetailScreen extends StatefulWidget {
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
   final AuthService _authService = AuthService();
+  final ChatService _chatService = ChatService();
   late Map<String, dynamic> _jobData;
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasApplied = false;
+  bool _isOpeningChat = false;
 
   @override
   void initState() {
@@ -70,10 +74,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final dynamic residentValue = data['resident_id'] ??
         data['resident']?['id'] ??
         data['user_id'] ??
-        data['user']?['id'];
+        data['user']?['id'] ??
+        data['user_details']?['id'];
     if (residentValue == null) return null;
     final id = residentValue.toString();
     return id.isEmpty ? null : id;
+  }
+
+  Map<String, dynamic>? _extractEmployerData(Map<String, dynamic> data) {
+    final dynamic employer = data['user'] ?? data['user_details'];
+    if (employer is Map<String, dynamic>) {
+      return employer;
+    }
+    return null;
   }
 
   @override
@@ -83,10 +96,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final String jobTitle = jobData['job_title']?.toString() ??
         jobData['title']?.toString() ??
         'Job Title';
-    final String employerName = jobData['user']?['name']?.toString() ??
+    final Map<String, dynamic>? employerData = _extractEmployerData(jobData);
+    final String employerName = employerData?['name']?.toString() ??
         jobData['employer_name']?.toString() ??
         jobData['posted_by']?.toString() ??
         'Employer';
+    final String employerAvatar =
+        _buildAvatarUrl(employerData?['avatar']?.toString());
     final String description = jobData['description']?.toString() ??
         jobData['safety_instructions']?.toString() ??
         jobData['tasks']?.toString() ??
@@ -191,7 +207,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final double rating = parseDouble(jobData['rating'], 5.0);
     final int reviews =
         parseInt(jobData['reviews'] ?? jobData['review_count'], 0);
-    final String employerPhone = jobData['user']?['phone']?.toString() ??
+    final String employerPhone = employerData?['phone']?.toString() ??
         jobData['employer_phone']?.toString() ??
         '';
 
@@ -295,58 +311,82 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         children: [
                           // Employer Section with Contact Button
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.person,
-                                color: Colors.green,
-                                size: 24,
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.green[100],
+                                backgroundImage: employerAvatar.isNotEmpty
+                                    ? NetworkImage(employerAvatar)
+                                        as ImageProvider
+                                    : null,
+                                child: employerAvatar.isEmpty
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: Colors.green,
+                                      )
+                                    : null,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       children: [
-                                        const Text(
-                                          'Employer: ',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        Text(
-                                          employerName,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
+                                        // const Text(
+                                        //   'Employer: ',
+                                        //   style: TextStyle(
+                                        //     fontSize: 14,
+                                        //     color: Colors.black87,
+                                        //   ),
+                                        // ),
+                                        Expanded(
+                                          child: Text(
+                                            employerName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
-                                          size: 16,
-                                        ),
+                                        // const Icon(
+                                        //   Icons.check_circle,
+                                        //   color: Colors.green,
+                                        //   size: 16,
+                                        // ),
                                       ],
                                     ),
+                                    if (employerPhone.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Phone: $employerPhone',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 12),
                               ElevatedButton.icon(
-                                onPressed: () {
-                                  if (employerPhone.isNotEmpty) {
-                                    // TODO: Implement phone call functionality
-                                  }
-                                },
+                                onPressed:
+                                    employerPhone.isNotEmpty ? () {} : null,
                                 icon: const Icon(Icons.phone, size: 16),
                                 label: const Text(
                                   'CONTACT',
                                   style: TextStyle(fontSize: 12),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green[700],
+                                  backgroundColor: employerPhone.isNotEmpty
+                                      ? Colors.green[700]
+                                      : Colors.grey[400],
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
@@ -632,9 +672,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    // TODO: Navigate to message screen
-                                  },
+                                  onPressed:
+                                      _isOpeningChat ? null : _handleMessageTap,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFFF6C945),
                                     foregroundColor: Colors.black87,
@@ -769,6 +808,71 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _handleMessageTap() async {
+    final employerData = _extractEmployerData(_jobData);
+    final String employerName = employerData?['name']?.toString() ?? 'Employer';
+    final String employerId = employerData?['id']?.toString() ?? '';
+
+    if (employerId.isEmpty) {
+      _showSnack('Employer details not available');
+      return;
+    }
+
+    setState(() {
+      _isOpeningChat = true;
+    });
+
+    try {
+      final profile = await _authService.getUserProfile();
+      final identity = _extractCurrentUserIdentity(profile);
+
+      if (identity == null || identity['id'] == null) {
+        throw Exception('Unable to determine your user details');
+      }
+
+      final myId = identity['id']!;
+      final myName = identity['name'] ?? 'You';
+      final chatId = _buildChatId(myId, employerId);
+
+      final employerAvatar =
+          _buildAvatarUrl(employerData?['avatar']?.toString());
+
+      await Future.wait([
+        _chatService.upsertUserProfile(
+          userId: myId,
+          name: myName,
+        ),
+        _chatService.upsertUserProfile(
+          userId: employerId,
+          name: employerName,
+          imageUrl: employerAvatar,
+        ),
+      ]);
+
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId,
+            myId: myId,
+            myName: myName,
+            otherName: employerName,
+            otherId: employerId,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showSnack('Unable to open chat: ${_friendlyError(e)}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOpeningChat = false;
+        });
+      }
+    }
+  }
+
   void _handleScreenPop() {
     Navigator.pop(context, _hasApplied ? true : null);
   }
@@ -811,6 +915,51 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ],
       ),
     );
+  }
+
+  Map<String, String?>? _extractCurrentUserIdentity(
+      Map<String, dynamic> profile) {
+    final candidates = <Map<String, dynamic>>[];
+
+    void addCandidate(dynamic value) {
+      if (value is Map<String, dynamic>) {
+        candidates.add(value);
+      }
+    }
+
+    addCandidate(profile['user']);
+    addCandidate(profile['data']);
+    if (profile['data'] is Map<String, dynamic>) {
+      addCandidate((profile['data'] as Map<String, dynamic>)['user']);
+    }
+    addCandidate(profile);
+
+    for (final candidate in candidates) {
+      final idValue = candidate['id'];
+      if (idValue == null) continue;
+      final id = idValue.toString();
+      if (id.isEmpty) continue;
+      final name = candidate['name']?.toString();
+      return {'id': id, 'name': name};
+    }
+
+    return null;
+  }
+
+  String _buildChatId(String firstId, String secondId) {
+    final ids = [firstId, secondId]..sort();
+    return '${ids.first}_${ids.last}';
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _friendlyError(Object error) {
+    return error.toString().replaceFirst('Exception: ', '').trim();
   }
 
   Widget _buildJobDetailRow({
@@ -894,5 +1043,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       default:
         return payType;
     }
+  }
+
+  String _buildAvatarUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    final sanitizedPath = path.startsWith('/') ? path.substring(1) : path;
+    final base = 'https://legacycarry.com';
+    if (sanitizedPath.startsWith('uploads/')) {
+      return '$base/$sanitizedPath';
+    }
+    return '$base/uploads/$sanitizedPath';
   }
 }

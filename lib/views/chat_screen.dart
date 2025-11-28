@@ -10,6 +10,7 @@ class ChatScreen extends StatefulWidget {
   final String myId;
   final String myName;
   final String otherName;
+  final String otherId;
 
   const ChatScreen({
     super.key,
@@ -17,6 +18,7 @@ class ChatScreen extends StatefulWidget {
     required this.myId,
     required this.myName,
     required this.otherName,
+    required this.otherId,
   });
 
   @override
@@ -36,20 +38,18 @@ class _ChatScreenState extends State<ChatScreen> {
     "Can't make it"
   ];
 
-  bool _sending = false;
-
   Future<void> _sendText() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    setState(() => _sending = true);
     await _chat.sendTextMessage(
       chatId: widget.chatId,
       text: text,
       senderId: widget.myId,
-      senderName: widget.myName, receiverId: '2',
+      senderName: widget.myName,
+      receiverId: widget.otherId,
+      receiverName: widget.otherName,
     );
     _messageController.clear();
-    setState(() => _sending = false);
     _scrollToBottom();
   }
 
@@ -62,14 +62,14 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (pick == null) return;
     final file = File(pick.path);
-    setState(() => _sending = true);
     await _chat.sendImageMessage(
       chatId: widget.chatId,
       file: file,
       senderId: widget.myId,
-      senderName: widget.myName, receiverId: '2',
+      senderName: widget.myName,
+      receiverId: widget.otherId,
+      receiverName: widget.otherName,
     );
-    setState(() => _sending = false);
     // _scrollToBottom();
   }
 
@@ -84,14 +84,14 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       return;
     }
-    setState(() => _sending = true);
     await _chat.sendImageMessage(
       chatId: widget.chatId,
       file: file,
       senderId: widget.myId,
-      senderName: widget.myName, receiverId: '2',
+      senderName: widget.myName,
+      receiverId: widget.otherId,
+      receiverName: widget.otherName,
     );
-    setState(() => _sending = false);
     _scrollToBottom();
   }
 
@@ -115,25 +115,30 @@ class _ChatScreenState extends State<ChatScreen> {
     String timeStr = '';
     if (createdAt != null) {
       final dt = createdAt.toDate().toLocal();
-      timeStr = "${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}";
+      timeStr =
+          "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints:
-        BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        margin: EdgeInsets.only(top: 8, left: isMe ? 40 : 8, right: isMe ? 8 : 40),
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+        margin:
+            EdgeInsets.only(top: 8, left: isMe ? 40 : 8, right: isMe ? 8 : 40),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isMe ? Colors.green[800] : Colors.white.withOpacity(0.95),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (type == 'text') ...[
-              Text(data['text'] ?? '', style: TextStyle(color: isMe ? Colors.white : Colors.black87)),
+              Text(data['text'] ?? '',
+                  style:
+                      TextStyle(color: isMe ? Colors.white : Colors.black87)),
             ] else if (type == 'image') ...[
               if ((data['attachmentUrl'] as String?) != null)
                 GestureDetector(
@@ -143,7 +148,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Image.network(
                     data['attachmentUrl'] as String,
                     width: MediaQuery.of(context).size.width * 0.5,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox(
                       width: 120,
                       height: 80,
                       child: Center(child: Icon(Icons.broken_image)),
@@ -152,7 +158,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
             ],
             const SizedBox(height: 4),
-            Text(timeStr, style: TextStyle(fontSize: 10, color: isMe ? Colors.white70 : Colors.black45)),
+            Text(timeStr,
+                style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white70 : Colors.black45)),
           ],
         ),
       ),
@@ -183,11 +192,15 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               // top bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-                    Text(widget.otherName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.pop(context)),
+                    Text(widget.otherName,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     IconButton(
                       onPressed: _sendLocalUploadedFileExample, // test upload
@@ -210,8 +223,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: _chat.messagesStream(widget.chatId),
                     builder: (context, snapshot) {
-                      if (snapshot.hasError) return const Center(child: Text("Error loading messages"));
-                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      if (snapshot.hasError)
+                        return const Center(
+                            child: Text("Error loading messages"));
+                      if (!snapshot.hasData)
+                        return const Center(child: CircularProgressIndicator());
 
                       final docs = snapshot.data!.docs;
                       if (docs.isEmpty) {
@@ -232,7 +248,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
               // quick replies row
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: SizedBox(
                   height: 38,
                   child: ListView.separated(
@@ -243,7 +260,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                         ),
                         onPressed: () {
                           _messageController.text = t;
@@ -260,10 +278,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
               // message composer
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.link), onPressed: _sendAttachmentFromPicker),
+                    IconButton(
+                        icon: const Icon(Icons.link),
+                        onPressed: _sendAttachmentFromPicker),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),

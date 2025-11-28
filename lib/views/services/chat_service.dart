@@ -26,11 +26,17 @@ class ChatService {
     required String lastMessage,
     required String senderId,
     required String receiverId,
+    required String senderName,
+    required String receiverName,
   }) async {
     await _firestore.collection('chats').doc(chatId).set({
       'users': [senderId, receiverId],
       'lastMessage': lastMessage,
       'lastMessageTime': FieldValue.serverTimestamp(),
+      'userNames': {
+        senderId: senderName,
+        receiverId: receiverName,
+      },
     }, SetOptions(merge: true));
   }
 
@@ -41,14 +47,12 @@ class ChatService {
     required String chatId,
     required String senderId,
     required String receiverId,
+    required String receiverName,
     required String text,
     required String senderName,
   }) async {
-    final msgRef = _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc();
+    final msgRef =
+        _firestore.collection('chats').doc(chatId).collection('messages').doc();
 
     await msgRef.set({
       'text': text,
@@ -65,6 +69,8 @@ class ChatService {
       lastMessage: text,
       senderId: senderId,
       receiverId: receiverId,
+      senderName: senderName,
+      receiverName: receiverName,
     );
   }
 
@@ -75,6 +81,7 @@ class ChatService {
     required String chatId,
     required String senderId,
     required String receiverId,
+    required String receiverName,
     required File file,
     required String senderName,
   }) async {
@@ -84,11 +91,8 @@ class ChatService {
     final TaskSnapshot snapshot = await ref.putFile(file);
     final String url = await snapshot.ref.getDownloadURL();
 
-    final msgRef = _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc();
+    final msgRef =
+        _firestore.collection('chats').doc(chatId).collection('messages').doc();
 
     await msgRef.set({
       'text': '',
@@ -105,6 +109,8 @@ class ChatService {
       lastMessage: "📷 Image",
       senderId: senderId,
       receiverId: receiverId,
+      senderName: senderName,
+      receiverName: receiverName,
     );
   }
 
@@ -129,15 +135,32 @@ class ChatService {
         final otherId = users.firstWhere((u) => u != myId);
 
         // Fetch user details
-        final userDoc =
-        await _db.collection('users').doc(otherId.toString()).get();
+        final docId = otherId.toString();
+        final userDoc = await _db.collection('users').doc(docId).get();
 
-        final otherName = userDoc['name'] ?? 'Unknown';
-        final otherImg = userDoc['image'] ?? '';
+        String otherName = 'Unknown';
+        String otherImg = '';
+
+        if (userDoc.exists) {
+          final userData = userDoc.data() ?? <String, dynamic>{};
+          otherName = userData['name']?.toString() ?? otherName;
+          otherImg = userData['image']?.toString() ?? otherImg;
+        }
+
+        if (otherName == 'Unknown') {
+          final storedNames =
+              (data['userNames'] as Map<String, dynamic>?) ?? {};
+          final fallbackName = storedNames[docId]?.toString();
+          if (fallbackName != null && fallbackName.isNotEmpty) {
+            otherName = fallbackName;
+          } else {
+            otherName = 'User $docId';
+          }
+        }
 
         list.add({
           'chatId': chatId,
-          'otherId': otherId.toString(),
+          'otherId': docId,
           'name': otherName,
           'image': otherImg,
           'lastMessage': data['lastMessage'] ?? '',
@@ -147,5 +170,18 @@ class ChatService {
 
       return list;
     });
+  }
+
+  Future<void> upsertUserProfile({
+    required String userId,
+    required String name,
+    String imageUrl = '',
+  }) async {
+    if (userId.isEmpty) return;
+    await _firestore.collection('users').doc(userId).set({
+      'name': name,
+      'image': imageUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

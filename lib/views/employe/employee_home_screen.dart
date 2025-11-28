@@ -15,218 +15,204 @@ class EmployeeHomeScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GetJobViewmodel()..fetchDashboardData(),
       child: Scaffold(
-        body:
-        Stack(
-            children: [
-        Container(
-        decoration: const BoxDecoration(
-        gradient: LinearGradient(
-            colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-    ),
-    ),
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF6C945), Color(0xFF7BC57B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Consumer<GetJobViewmodel>(
+                builder: (context, vm, _) {
+                  final recommendedJobs =
+                      vm.jobData.whereType<Map<String, dynamic>>().toList();
 
-           SafeArea(
-            child: Consumer<GetJobViewmodel>(
-              builder: (context, vm, _) {
-                final recommendedJobs =
-                    vm.jobData.whereType<Map<String, dynamic>>().toList();
+                  // Filter jobs with status "active" for the stats card
+                  final activeJobs = recommendedJobs.where((job) {
+                    final status = job['status']?.toString().toLowerCase();
+                    return status == 'active';
+                  }).toList();
 
-                // Filter jobs with status "active" for the stats card
-                final activeJobs = recommendedJobs.where((job) {
-                  final status = job['status']?.toString().toLowerCase();
-                  return status == 'active';
-                }).toList();
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Consumer<UserProfileProvider>(
-                            builder: (context, profileProvider, _) {
-                              final greeting = profileProvider.isLoading
-                                  ? "Hello 👋"
-                                  : "Hello ${profileProvider.userName} 👋";
-                              return Text(
-                                greeting,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.notifications_none,
-                                color: Colors.black),
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Top Cards Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildInfoCard(
-                              "Today", activeJobs.length.toString()),
-                          _buildInfoCard("This Week", "00"),
-                          _buildInfoCard("Balance", "00"),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-
-
-                    Column(
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Top Bar
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildGreenMenu(
-                              icon: Icons.search,
-                              label: "Find Jobs",
-                              onTap: () {
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        SearchJobsScreen(),
+                            Consumer<UserProfileProvider>(
+                              builder: (context, profileProvider, _) {
+                                final greeting = profileProvider.isLoading
+                                    ? "Hello 👋"
+                                    : "Hello ${profileProvider.userName} 👋";
+                                return Text(
+                                  greeting,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
                                   ),
                                 );
-
-
                               },
                             ),
-                            _buildGreenMenu(
-                              icon: Icons.work_outline,
-                              label: "My Jobs",
-                              onTap: () {
-
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        FindMyJobsScreen(),
-                                  ),
-                                );
-                              },
+                            IconButton(
+                              icon: const Icon(Icons.notifications_none,
+                                  color: Colors.black),
+                              onPressed: () {},
                             ),
                           ],
                         ),
-                        Row(
-                          children: [
-                            _buildGreenMenu(
-                              icon: Icons.attach_money,
-                              label: "Earnings",
-                              onTap: () {
-                              },
-                            ),
-                            _buildGreenMenu(
-                              icon: Icons.message_outlined,
-                              label: "Messages",
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        MessagesScreen(),
-                                  ),
-                                );
+                        const SizedBox(height: 16),
 
-                              },
-                            ),
+                        // Top Cards Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildInfoCard(
+                                "Today", activeJobs.length.toString()),
+                            _buildInfoCard("This Week", "00"),
+                            _buildInfoCard("Balance", "00"),
                           ],
                         ),
-                      ],
-                    ),
+                        const SizedBox(height: 16),
 
-
-
-                    const SizedBox(height: 24),
-
-                      // Recommended Jobs
-                      const Text(
-                        "Recommended Jobs:",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Loading State
-                      if (vm.status == GetJobStatus.loading)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      // Error State
-                      else if (vm.status == GetJobStatus.error)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
+                        Column(
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  "Error: ${vm.errorMessage}",
-                                  style: const TextStyle(color: Colors.red),
-                                  textAlign: TextAlign.center,
+                                _buildGreenMenu(
+                                  icon: Icons.search,
+                                  label: "Find Jobs",
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SearchJobsScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
-                                const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: () => vm.fetchDashboardData(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                  ),
-                                  child: const Text("Retry"),
+                                _buildGreenMenu(
+                                  icon: Icons.work_outline,
+                                  label: "My Jobs",
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            FindMyJobsScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
-                          ),
-                        )
-                      // Empty State
-                      else if (recommendedJobs.isEmpty)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: Text(
-                              "No recommended jobs available",
-                              style: TextStyle(fontSize: 16),
+                            Row(
+                              children: [
+                                _buildGreenMenu(
+                                  icon: Icons.attach_money,
+                                  label: "Earnings",
+                                  onTap: () {},
+                                ),
+                                _buildGreenMenu(
+                                  icon: Icons.message_outlined,
+                                  label: "Messages",
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => MessagesScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Recommended Jobs
+                        const Text(
+                          "Recommended Jobs:",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
-                        )
-                      // Jobs List
-                      else
-                        ...recommendedJobs.take(5).map((job) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildJobCardFromData(
-                              context: context,
-                              job: job,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Loading State
+                        if (vm.status == GetJobStatus.loading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: CircularProgressIndicator(),
                             ),
-                          );
-                        }).toList(),
-                    ],
-                  ),
-                );
-              },
+                          )
+                        // Error State
+                        else if (vm.status == GetJobStatus.error)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    "Error: ${vm.errorMessage}",
+                                    style: const TextStyle(color: Colors.red),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () => vm.fetchDashboardData(),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                    ),
+                                    child: const Text("Retry"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        // Empty State
+                        else if (recommendedJobs.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                "No recommended jobs available",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          )
+                        // Jobs List
+                        else
+                          ...recommendedJobs.take(5).map((job) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildJobCardFromData(
+                                context: context,
+                                job: job,
+                              ),
+                            );
+                          }).toList(),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-            ],
+          ],
         ),
       ),
     );
@@ -271,39 +257,6 @@ class EmployeeHomeScreen extends StatelessWidget {
     );
   }
 
-  // Action Button Widget
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(50),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-              ],
-            ),
-            padding: const EdgeInsets.all(10),
-            child: Icon(icon, color: Colors.green, size: 28),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.black87),
-        ),
-      ],
-    );
-  }
-
   // Job Card Widget from API Data
   Widget _buildJobCardFromData({
     required BuildContext context,
@@ -312,7 +265,13 @@ class EmployeeHomeScreen extends StatelessWidget {
     // Extract data from job
     final String jobTitle =
         job['job_title']?.toString() ?? job['title']?.toString() ?? 'Job Title';
-    final String employerName = job['user']?['name']?.toString() ??
+    Map<String, dynamic>? employerData;
+    if (job['user'] is Map<String, dynamic>) {
+      employerData = job['user'] as Map<String, dynamic>;
+    } else if (job['user_details'] is Map<String, dynamic>) {
+      employerData = job['user_details'] as Map<String, dynamic>;
+    }
+    final String employerName = employerData?['name']?.toString() ??
         job['employer_name']?.toString() ??
         job['posted_by']?.toString() ??
         'Employer';
@@ -488,7 +447,6 @@ class EmployeeHomeScreen extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /*

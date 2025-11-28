@@ -4,14 +4,30 @@ import 'package:legacy_carry/views/resident/payments_screen.dart';
 import 'package:legacy_carry/views/resident/post_a_job_one.dart';
 import '../providers/user_profile_provider.dart';
 
-class ResidentHomeScreen extends StatelessWidget {
+class ResidentHomeScreen extends StatefulWidget {
   const ResidentHomeScreen({super.key});
 
+  @override
+  State<ResidentHomeScreen> createState() => _ResidentHomeScreenState();
+}
+
+class _ResidentHomeScreenState extends State<ResidentHomeScreen> {
   static const List<Map<String, String>> recentApplicants = [
     // {"name": "Vikas", "job": "Electrician", "emoji": "🔌"},
     // {"name": "Rahul", "job": "Plumber", "emoji": "🚰"},
     // {"name": "Sunita", "job": "Cook", "emoji": "🍳"},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final profileProvider = context.read<UserProfileProvider>();
+      if (!profileProvider.isLoading && profileProvider.profileData == null) {
+        profileProvider.fetchProfile();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
