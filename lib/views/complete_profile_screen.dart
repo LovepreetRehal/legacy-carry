@@ -63,6 +63,31 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
   int? selectedStateId;
   int? selectedCityId;
   int? selectedSocietyId;
+  String? selectedFlat;
+  int? selectedFlatId;
+  final TextEditingController floorNumberController = TextEditingController();
+
+  // Helper method to get flat display text
+  String _getFlatDisplayText(Map<String, dynamic> flat) {
+    final buildingNo = (flat['building_no'] ?? '').toString();
+    final flatId = (flat['id'] ?? '').toString();
+    final ownerName = (flat['owner_name'] ?? '').toString();
+    final status = (flat['status'] ?? '').toString();
+
+    if (buildingNo.isNotEmpty) {
+      String display = buildingNo;
+      if (ownerName.isNotEmpty) {
+        display += ' - $ownerName';
+      }
+      if (status == "vacant") {
+        display += ' (Vacant)';
+      } else if (status == "occupied") {
+        display += ' (Occupied)';
+      }
+      return display;
+    }
+    return 'Flat #$flatId';
+  }
 
   final residentialOptions = ["Society", "Individual", "Commercial"];
   final paymentOptions = ["Bank Transfer", "Cash", "UPI"];
@@ -83,6 +108,7 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
     customSocietyNameController.dispose();
     customSocietyAddressController.dispose();
     customSocietyPincodeController.dispose();
+    floorNumberController.dispose();
     for (var controller in otpControllers) {
       controller.dispose();
     }
@@ -225,6 +251,28 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
         );
         return;
       }
+
+      // Validate flat selection
+      if (selectedFlat == null || selectedFlatId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please select a flat"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Validate floor number
+      if (floorNumberController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please enter floor number"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     // Validate residential status
@@ -269,6 +317,9 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
       "city": selectedCity ?? "",
       "district": selectedDistrict ?? "",
       "payment_method": selectedPaymentMethod ?? "Cash",
+      // Flat and floor information
+      "flat_id": selectedFlatId,
+      "floor_number": floorNumberController.text.trim(),
     };
 
     debugPrint("=====================================");
@@ -830,9 +881,21 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                   child: Text(e),
                                 ))
                             .toList(),
-                        onChanged: (val) => setState(() {
-                          selectedResidentialStatus = val;
-                        }),
+                        onChanged: (val) {
+                          setState(() {
+                            selectedResidentialStatus = val;
+                            // Clear flat and floor fields if not Society
+                            if (val != "Society") {
+                              selectedFlat = null;
+                              selectedFlatId = null;
+                              floorNumberController.clear();
+                              final viewModel = Provider.of<CountryViewModel>(
+                                  context,
+                                  listen: false);
+                              viewModel.clearFlats();
+                            }
+                          });
+                        },
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: "Residential Status",
@@ -913,8 +976,12 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                   selectedCityId = null;
                                   selectedSociety = null;
                                   selectedSocietyId = null;
+                                  selectedFlat = null;
+                                  selectedFlatId = null;
+                                  floorNumberController.clear();
                                 });
                                 viewModel.clearSocieties();
+                                viewModel.clearFlats();
                                 viewModel.fetchCities(selectedStateId!);
                               },
                               decoration: const InputDecoration(
@@ -951,7 +1018,11 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                                   selectedCityId = city['id'];
                                   selectedSociety = null;
                                   selectedSocietyId = null;
+                                  selectedFlat = null;
+                                  selectedFlatId = null;
+                                  floorNumberController.clear();
                                 });
+                                viewModel.clearFlats();
                                 if (selectedCityId != null) {
                                   viewModel
                                       .fetchSocietiesByCity(selectedCityId!);
@@ -979,76 +1050,200 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
                             ),
                       const SizedBox(height: 12),
 
-                      // Society Autocomplete (inline searchable)
-                      viewModel.isLoadingSocieties &&
-                              viewModel.societies.isEmpty
-                          ? const Center(child: CircularProgressIndicator())
-                          : Autocomplete<String>(
-                              optionsBuilder:
-                                  (TextEditingValue textEditingValue) {
-                                final query =
-                                    textEditingValue.text.toLowerCase();
-                                // Get unique society names
-                                final uniqueSocieties = viewModel.societies
-                                    .fold<List<Map<String, dynamic>>>(
-                                  [],
-                                  (uniqueList, society) {
-                                    if (!uniqueList.any(
-                                        (s) => s['name'] == society['name'])) {
-                                      uniqueList.add(society);
-                                    }
-                                    return uniqueList;
-                                  },
-                                );
-                                final List<String> filtered = uniqueSocieties
-                                    .map<String>(
-                                        (s) => (s['name'] ?? '').toString())
-                                    .where((name) =>
-                                        name.toLowerCase().contains(query))
-                                    .toList();
+                      // Society Autocomplete (only show if Society is selected)
+                      if (selectedResidentialStatus == "Society") ...[
+                        viewModel.isLoadingSocieties &&
+                                viewModel.societies.isEmpty
+                            ? const Center(child: CircularProgressIndicator())
+                            : Autocomplete<String>(
+                                optionsBuilder:
+                                    (TextEditingValue textEditingValue) {
+                                  final query =
+                                      textEditingValue.text.toLowerCase();
+                                  // Get unique society names
+                                  final uniqueSocieties = viewModel.societies
+                                      .fold<List<Map<String, dynamic>>>(
+                                    [],
+                                    (uniqueList, society) {
+                                      if (!uniqueList.any((s) =>
+                                          s['name'] == society['name'])) {
+                                        uniqueList.add(society);
+                                      }
+                                      return uniqueList;
+                                    },
+                                  );
+                                  final List<String> filtered = uniqueSocieties
+                                      .map<String>(
+                                          (s) => (s['name'] ?? '').toString())
+                                      .where((name) =>
+                                          name.toLowerCase().contains(query))
+                                      .toList();
 
-                                if (query.isEmpty ||
-                                    _createSocietyOptionLabel
-                                        .toLowerCase()
-                                        .contains(query)) {
-                                  filtered.add(_createSocietyOptionLabel);
-                                }
+                                  if (query.isEmpty ||
+                                      _createSocietyOptionLabel
+                                          .toLowerCase()
+                                          .contains(query)) {
+                                    filtered.add(_createSocietyOptionLabel);
+                                  }
 
-                                return filtered;
-                              },
-                              onSelected: (String selection) {
-                                if (selection == _createSocietyOptionLabel) {
-                                  _showCreateSocietyDialog(viewModel);
-                                  return;
-                                }
-                                final society = viewModel.societies.firstWhere(
-                                  (s) => s['name'] == selection,
-                                  orElse: () => <String, dynamic>{},
-                                );
-                                setState(() {
-                                  selectedSociety = selection;
-                                  selectedSocietyId = society['id'];
-                                });
-                              },
-                              fieldViewBuilder: (context, controller, focusNode,
-                                  onFieldSubmitted) {
-                                if (selectedSociety != null &&
-                                    controller.text.isEmpty) {
-                                  controller.text = selectedSociety!;
-                                }
-                                return TextFormField(
-                                  controller: controller,
-                                  focusNode: focusNode,
-                                  decoration: const InputDecoration(
-                                    labelText: "Society",
-                                    border: OutlineInputBorder(),
-                                    isDense: true,
-                                    hintText: "Type to search society",
-                                  ),
-                                );
-                              },
+                                  return filtered;
+                                },
+                                onSelected: (String selection) {
+                                  if (selection == _createSocietyOptionLabel) {
+                                    _showCreateSocietyDialog(viewModel);
+                                    return;
+                                  }
+                                  final society =
+                                      viewModel.societies.firstWhere(
+                                    (s) => s['name'] == selection,
+                                    orElse: () => <String, dynamic>{},
+                                  );
+                                  setState(() {
+                                    selectedSociety = selection;
+                                    selectedSocietyId = society['id'];
+                                    selectedFlat = null;
+                                    selectedFlatId = null;
+                                    floorNumberController.clear();
+                                  });
+                                  // Fetch flats when society is selected
+                                  if (society['id'] != null) {
+                                    viewModel
+                                        .fetchFlatsBySociety(society['id']);
+                                  } else {
+                                    viewModel.clearFlats();
+                                  }
+                                },
+                                fieldViewBuilder: (context, controller,
+                                    focusNode, onFieldSubmitted) {
+                                  if (selectedSociety != null &&
+                                      controller.text.isEmpty) {
+                                    controller.text = selectedSociety!;
+                                  }
+                                  return TextFormField(
+                                    controller: controller,
+                                    focusNode: focusNode,
+                                    decoration: const InputDecoration(
+                                      labelText: "Society",
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                      hintText: "Type to search society",
+                                    ),
+                                  );
+                                },
+                              ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Flat Number Dropdown (only show if Society is selected)
+                      if (selectedResidentialStatus == "Society") ...[
+                        if (selectedSocietyId == null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange),
                             ),
-                      const SizedBox(height: 12),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline,
+                                    color: Colors.orange, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Please select a society first to view available flats",
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          viewModel.isLoadingFlats
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : viewModel.flats.isEmpty
+                                  ? Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.info_outline,
+                                              color: Colors.grey, size: 20),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              "No flats available for this society",
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : DropdownButtonFormField<int>(
+                                      value: selectedFlatId,
+                                      isExpanded: true,
+                                      hint: const Text("Select Flat"),
+                                      items: viewModel.flats
+                                          .map((flat) {
+                                            final flatId = flat['id'] as int?;
+                                            if (flatId == null) return null;
+                                            return DropdownMenuItem<int>(
+                                              value: flatId,
+                                              child: Text(
+                                                  _getFlatDisplayText(flat)),
+                                            );
+                                          })
+                                          .whereType<DropdownMenuItem<int>>()
+                                          .toList(),
+                                      onChanged: (val) {
+                                        final flat = viewModel.flats.firstWhere(
+                                          (f) => f['id'] == val,
+                                        );
+                                        setState(() {
+                                          selectedFlatId = val;
+                                          selectedFlat =
+                                              _getFlatDisplayText(flat);
+                                        });
+                                      },
+                                      decoration: const InputDecoration(
+                                        labelText: "Flat Number",
+                                        border: OutlineInputBorder(),
+                                        isDense: true,
+                                        prefixIcon: Icon(Icons.home),
+                                      ),
+                                    ),
+                          const SizedBox(height: 12),
+
+                          // Floor Number Field
+                          TextField(
+                            controller: floorNumberController,
+                            keyboardType: TextInputType.number,
+                            enabled: selectedSocietyId != null,
+                            decoration: const InputDecoration(
+                              hintText: "Enter Floor Number",
+                              labelText: "Floor Number",
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                              prefixIcon: Icon(Icons.layers),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                      ],
 
                       TextField(
                         controller: villageController,

@@ -8,12 +8,14 @@ class CountryViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> states = [];
   List<Map<String, dynamic>> cities = [];
   List<dynamic> societies = [];
+  List<Map<String, dynamic>> flats = [];
   final String baseUrl = 'https://legacycarry.com/api';
 
   bool isLoadingCountries = false;
   bool isLoadingStates = false;
   bool isLoadingCities = false;
   bool isLoadingSocieties = false;
+  bool isLoadingFlats = false;
 
   // Fetch countries
   Future<void> fetchCountries() async {
@@ -168,6 +170,52 @@ class CountryViewModel extends ChangeNotifier {
 
   void clearSocieties() {
     societies = [];
+    notifyListeners();
+  }
+
+  Future<void> fetchFlatsBySociety(int societyId) async {
+    isLoadingFlats = true;
+    flats = [];
+    notifyListeners();
+
+    try {
+      final url = Uri.parse('$baseUrl/flats-by-society/$societyId');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is Map<String, dynamic>) {
+          if (data['status'] == true && data['flats'] is List) {
+            flats = List<Map<String, dynamic>>.from(
+              data['flats'].map((item) => Map<String, dynamic>.from(item)),
+            );
+          } else {
+            debugPrint(
+                '❌ Unexpected flats payload for society $societyId: ${response.body}');
+          }
+        } else if (data is List) {
+          flats = List<Map<String, dynamic>>.from(
+            data.map((item) => Map<String, dynamic>.from(item)),
+          );
+        } else {
+          debugPrint(
+              '❌ Unexpected flats payload for society $societyId: ${response.body}');
+        }
+      } else {
+        debugPrint(
+            '❌ Failed to fetch flats for society $societyId: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching flats for society $societyId: $e');
+    }
+
+    isLoadingFlats = false;
+    notifyListeners();
+  }
+
+  void clearFlats() {
+    flats = [];
     notifyListeners();
   }
 
