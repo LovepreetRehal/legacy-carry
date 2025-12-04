@@ -24,6 +24,20 @@ if (flutterVersionName == null) {
     flutterVersionName = "1.0"
 }
 
+// Load .env file for API keys
+def envProperties = new Properties()
+def envFile = rootProject.file("../.env")
+if (envFile.exists()) {
+    envFile.withReader("UTF-8") { reader ->
+        envProperties.load(reader)
+    }
+}
+
+// Get Google Maps API key from .env file
+def googleMapsApiKey = envProperties.getProperty("GOOGLE_MAP_API_KEY", "")
+// Remove quotes if present
+googleMapsApiKey = googleMapsApiKey.replaceAll(/^['"]|['"]$/, "")
+
 android {
     namespace = "com.example.legacy_carry"
     compileSdk = flutter.compileSdkVersion
@@ -46,6 +60,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
+        
+        // Inject API key from .env into AndroidManifest.xml
+        manifestPlaceholders = [
+            GOOGLE_MAP_API_KEY: googleMapsApiKey
+        ]
     }
 
     buildTypes {

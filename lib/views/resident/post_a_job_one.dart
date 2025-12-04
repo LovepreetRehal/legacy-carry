@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/resident/post_a_job_two.dart';
 import 'package:legacy_carry/views/viewmodels/post_job_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../models/create_job_request.dart';
 
@@ -25,16 +28,140 @@ class _PostAJobOneScreenContent extends StatefulWidget {
   State<_PostAJobOneScreenContent> createState() => _PostAJobOneContentState();
 }
 
-class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
+class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> with WidgetsBindingObserver {
 
   final TextEditingController jobTitleController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
 
+  GoogleMapController? _mapController;
+  
+  static const LatLng _defaultLocation = LatLng(37.7749, -122.4194);
+
+  LatLng? _currentLocation;
+  bool _isLoadingLocation = true;
+  bool _shouldRetryLocation = false;
+
   String jobType = 'Full Day';
   String? workersRequired;
 
   final List<String> workersList = List.generate(20, (index) => '${index + 1}');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _shouldRetryLocation) {
+      _shouldRetryLocation = false;
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _getCurrentLocation();
+        }
+      });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+
+        if (mounted) {
+          _showLocationServiceDialog();
+        }
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isLoadingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _currentLocation = LatLng(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+      });
+
+
+      if (_mapController != null && _currentLocation != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(_currentLocation!, 14.0),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingLocation = false;
+      });
+      print('Error getting location: $e');
+    }
+  }
+
+  Future<void> _showLocationServiceDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Location Services Disabled'),
+          content: const Text(
+            'Location services are disabled. Please enable location services to see your current location on the map.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Open Settings'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                _shouldRetryLocation = true;
+
+                await Geolocator.openLocationSettings();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +211,7 @@ class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Job Title
+
                 TextField(
                   controller: jobTitleController,
                   decoration: InputDecoration(
@@ -100,16 +227,53 @@ class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
                 ),
                 const SizedBox(height: 20),
 
-                // Location Map Thumbnail
-                Container(
-                  height: 120,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(6),
+                // Location Map
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 120,
+                    width: double.infinity,
+                    child: Stack(
+                      children: [
+                        GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: _currentLocation ?? _defaultLocation,
+                            zoom: 14.0,
+                          ),
+                          onMapCreated: (GoogleMapController controller) {
+                            _mapController = controller;
+                            if (_currentLocation != null) {
+                              controller.animateCamera(
+                                CameraUpdate.newLatLngZoom(_currentLocation!, 14.0),
+                              );
+                            }
+                          },
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          zoomControlsEnabled: false,
+                          mapToolbarEnabled: false,
+                          markers: _currentLocation != null
+                              ? {
+                                  Marker(
+                                    markerId: const MarkerId('current_location'),
+                                    position: _currentLocation!,
+                                    infoWindow: const InfoWindow(
+                                      title: 'Your Current Location',
+                                    ),
+                                  ),
+                                }
+                              : {},
+                        ),
+                        if (_isLoadingLocation)
+                          Container(
+                            color: Colors.white.withOpacity(0.7),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: const Text('Map Thumbnail'),
                 ),
                 const SizedBox(height: 12),
 
@@ -219,9 +383,11 @@ class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
                             ? "Unknown Location"
                             : locationController.text.trim(),
                         address: addressController.text.trim(),
-                        jobType: jobType.toLowerCase().replaceAll(' ', '_'), // full_day, part_time, hourly
+                        jobType: jobType.toLowerCase().replaceAll(' ', '_'),
+
                         workersRequired: int.parse(workersRequired!),
-                        skillsRequired: [], // will add in Step 2
+                        skillsRequired: [],
+
                         toolsProvided: false,
                         documentsRequired: [],
                         safetyInstructions: "",

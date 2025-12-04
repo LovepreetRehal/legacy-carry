@@ -8,10 +8,8 @@ import 'package:provider/provider.dart';
 import '../viewmodels/send_otp_viewmodel.dart';
 import 'enter_otp_screen.dart';
 
-
-
 class _PostAJobOne extends StatelessWidget {
-  const _PostAJobOne({super.key});
+  const _PostAJobOne();
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +45,6 @@ class _PostAJobOneContentState extends State<_PostAJobOneScreenContent> {
               fit: BoxFit.cover,
             ),
           ),
-
         ],
       ),
     );

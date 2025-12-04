@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../chat_screen.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
@@ -14,7 +16,7 @@ class JobDetailScreen extends StatefulWidget {
   State<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
-class _JobDetailScreenState extends State<JobDetailScreen> {
+class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingObserver {
   final AuthService _authService = AuthService();
   final ChatService _chatService = ChatService();
   late Map<String, dynamic> _jobData;
@@ -22,12 +24,129 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String? _errorMessage;
   bool _hasApplied = false;
   bool _isOpeningChat = false;
+  
+  GoogleMapController? _mapController;
+  static const LatLng _defaultLocation = LatLng(37.7749, -122.4194);
+  LatLng? _currentLocation;
+  bool _isLoadingLocation = true;
+  bool _shouldRetryLocation = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _jobData = Map<String, dynamic>.from(widget.jobData);
     _fetchJobDetails();
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _shouldRetryLocation) {
+      _shouldRetryLocation = false;
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _getCurrentLocation();
+        }
+      });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+
+        if (mounted) {
+          _showLocationServiceDialog();
+        }
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isLoadingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _currentLocation = LatLng(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+      });
+
+
+      if (_mapController != null && _currentLocation != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(_currentLocation!),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingLocation = false;
+      });
+      print('Error getting location: $e');
+    }
+  }
+
+  Future<void> _showLocationServiceDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Location Services Disabled'),
+          content: const Text(
+            'Location services are disabled. Please enable location services to see your current location on the map.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Open Settings'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                _shouldRetryLocation = true;
+
+                await Geolocator.openLocationSettings();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _fetchJobDetails() async {
@@ -92,7 +211,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> jobData = _jobData;
-    // Extract data from jobData with fallbacks
+
     final String jobTitle = jobData['job_title']?.toString() ??
         jobData['title']?.toString() ??
         'Job Title';
@@ -108,7 +227,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         jobData['tasks']?.toString() ??
         '';
 
-    // Handle skills_required as list or string
+
     List<String> skillsList = [];
     if (jobData['skills_required'] != null) {
       if (jobData['skills_required'] is List) {
@@ -147,7 +266,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ? '₹${jobData['pay_amount']} / ${_formatPayType(jobData['pay_type']?.toString() ?? 'per_day')}'
         : 'Not specified';
 
-    // Helper function to safely parse int
+
     int parseInt(dynamic value, int defaultValue) {
       if (value == null) return defaultValue;
       if (value is int) return value;
@@ -165,7 +284,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
     final String address = jobData['address']?.toString() ?? '';
 
-    // Handle documents_required as list or string
+
     List<String> documentsList = [];
     if (jobData['documents_required'] != null) {
       if (jobData['documents_required'] is List) {
@@ -193,7 +312,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         jobData['applied']?.toString().toLowerCase() == 'true';
     final int advanceAmount = parseInt(jobData['advance_amount'], 0);
 
-    // Helper function to safely parse double
+
     double parseDouble(dynamic value, double defaultValue) {
       if (value == null) return defaultValue;
       if (value is double) return value;
@@ -211,7 +330,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         jobData['employer_phone']?.toString() ??
         '';
 
-    // Calculate duration if both dates are available
+
     String duration = 'Not specified';
     if (jobData['start_date'] != null && jobData['end_date'] != null) {
       try {
@@ -244,7 +363,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           child: SafeArea(
             child: Column(
               children: [
-                // Header with back button and title
+
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -266,7 +385,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 48), // Balance the back button
+                      const SizedBox(width: 48),
+
                     ],
                   ),
                 ),
@@ -289,7 +409,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     child: _buildErrorBanner(_errorMessage!),
                   ),
 
-                // Content Card
+
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
@@ -309,7 +429,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Employer Section with Contact Button
+
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -334,14 +454,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        // const Text(
-                                        //   'Employer: ',
-                                        //   style: TextStyle(
-                                        //     fontSize: 14,
-                                        //     color: Colors.black87,
-                                        //   ),
-                                        // ),
                                         Expanded(
+
                                           child: Text(
                                             employerName,
                                             maxLines: 1,
@@ -354,11 +468,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        // const Icon(
-                                        //   Icons.check_circle,
-                                        //   color: Colors.green,
-                                        //   size: 16,
-                                        // ),
+
                                       ],
                                     ),
                                     if (employerPhone.isNotEmpty) ...[
@@ -403,7 +513,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                           const SizedBox(height: 12),
 
-                          // Rating Section
+
                           Row(
                             children: [
                               const Icon(
@@ -436,7 +546,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           const Divider(color: Colors.grey, thickness: 1),
                           const SizedBox(height: 20),
 
-                          // Job Details
+
                           if (skillsList.isNotEmpty || description.isNotEmpty)
                             _buildJobDetailRow(
                               icon: Icons.assignment,
@@ -495,12 +605,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             icon: Icons.hourglass_empty,
                             label: 'Duration: ',
                             value: duration,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildJobDetailRow(
-                            icon: Icons.location_on,
-                            label: 'Location: ',
-                            value: location,
                           ),
                           if (address.isNotEmpty) ...[
                             const SizedBox(height: 12),
@@ -565,7 +669,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           const Divider(color: Colors.grey, thickness: 1),
                           const SizedBox(height: 20),
 
-                          // Map Section
+
                           const Text(
                             'Location',
                             style: TextStyle(
@@ -575,58 +679,67 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Stack(
-                                children: [
-                                  // Placeholder for map - you can replace this with Google Maps widget
-                                  Container(
-                                    color: Colors.grey[100],
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.map,
-                                            size: 48,
-                                            color: Colors.grey[400],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            location,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              height: 200,
+                              width: double.infinity,
+                              child: GoogleMap(
+                                initialCameraPosition: const CameraPosition(
+                                  target: _defaultLocation,
+                                  zoom: 14.0,
+                                ),
+                                onMapCreated: (GoogleMapController controller) {
+                                  _mapController = controller;
+                                },
+                                myLocationEnabled: true,
+                                myLocationButtonEnabled: true,
+                                zoomControlsEnabled: true,
+                                mapToolbarEnabled: false,
+                                markers: {
+                                  const Marker(
+                                    markerId: MarkerId('job_location'),
+                                    position: _defaultLocation,
+                                    infoWindow: InfoWindow(
+                                      title: 'Job Location',
+                                    ),
+                                  ),
+                                  if (_currentLocation != null)
+                                    Marker(
+                                      markerId: const MarkerId('current_location'),
+                                      position: _currentLocation!,
+                                      infoWindow: const InfoWindow(
+                                        title: 'Your Current Location',
                                       ),
                                     ),
-                                  ),
-                                  // Map pin indicator
-                                  const Center(
-                                    child: Icon(
-                                      Icons.location_on,
-                                      color: Colors.red,
-                                      size: 40,
-                                    ),
-                                  ),
-                                ],
+                                },
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  location,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
 
                           const SizedBox(height: 20),
 
-                          // Action Buttons
+
                           Row(
                             children: [
                               Expanded(

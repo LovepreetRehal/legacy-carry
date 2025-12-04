@@ -15,14 +15,10 @@ import 'views/employe/employee_home_screen.dart';
 import 'views/employe/employee_register_screen.dart';
 import 'views/employe/enter_otp_screen.dart';
 import 'views/employe/login_screen.dart';
-import 'views/employe/professional_details_screen.dart';
 import 'views/employe/select_type_screen.dart';
 import 'views/employe/sign_in_with_number_screen.dart';
-import 'views/employe/verify.dart';
 
 import 'views/resident/post_a_job_one.dart';
-import 'views/resident/post_a_job_two.dart';
-import 'views/resident/post_a_job_three.dart';
 import 'views/resident/resident_dashboard_screen.dart';
 import 'views/resident/resident_home_screen.dart';
 
@@ -31,7 +27,7 @@ class AppRoutes {
     // Dashboard Screens
     '/home': (context) => const HomeScreen(),
     '/edit_profile': (context) => const EditProfileScreen(),
-    '/messages': (context) =>  MessagesScreen(),
+    '/messages': (context) => MessagesScreen(),
     '/my_jobs': (context) => const MyJobsScreen(),
     '/search': (context) => const SearchJobsScreen(),
     '/settings': (context) => const SettingsScreen(),
