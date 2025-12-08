@@ -71,20 +71,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text("Messages",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold)),
-                    Icon(Icons.search, color: Colors.white),
-                  ],
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.all(12),
+              //   child: Row(
+              //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //     children: const [
+              //       Text("Messages",
+              //           style: TextStyle(
+              //               color: Colors.white,
+              //               fontSize: 18,
+              //               fontWeight: FontWeight.bold)),
+              //       Icon(Icons.search, color: Colors.white),
+              //     ],
+              //   ),
+              // ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/employee_jobs_viewmodel.dart';
+import 'job_detail_screen.dart';
 
 class FindMyJobsScreen extends StatefulWidget {
   const FindMyJobsScreen({Key? key}) : super(key: key);
@@ -147,7 +148,9 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
                                         separatorBuilder: (context, index) =>
                                             const SizedBox(height: 12),
                                         itemBuilder: (context, index) {
-                                          final job = filteredJobs[index];
+                                          final Map<String, dynamic> job =
+                                              Map<String, dynamic>.from(
+                                                  filteredJobs[index] as Map);
                                           return _buildJobCard(
                                               job: job,
                                               selectedTab: selectedTab);
@@ -373,13 +376,23 @@ class _JobListingScreenState extends State<FindMyJobsScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // Navigate to job details screen if needed
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (context) => JobDetailsScreen(jobId: jobId),
-                //   ),
-                // );
+                final Map<String, dynamic> jobData = {};
+                if (jobPost != null) {
+                  jobData.addAll(jobPost);
+                }
+                jobData.addAll(job);
+                jobData['job_id'] = jobId;
+                jobData.putIfAbsent('job_title', () => title);
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => JobDetailScreen(
+                      jobData: jobData,
+                      showActions: false,
+                    ),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1B5E20),

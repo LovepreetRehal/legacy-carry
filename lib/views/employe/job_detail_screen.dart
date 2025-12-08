@@ -9,14 +9,20 @@ import 'apply_for_job_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final Map<String, dynamic> jobData;
+  final bool showActions;
 
-  const JobDetailScreen({Key? key, required this.jobData}) : super(key: key);
+  const JobDetailScreen({
+    Key? key,
+    required this.jobData,
+    this.showActions = true,
+  }) : super(key: key);
 
   @override
   State<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
-class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingObserver {
+class _JobDetailScreenState extends State<JobDetailScreen>
+    with WidgetsBindingObserver {
   final AuthService _authService = AuthService();
   final ChatService _chatService = ChatService();
   late Map<String, dynamic> _jobData;
@@ -24,7 +30,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
   String? _errorMessage;
   bool _hasApplied = false;
   bool _isOpeningChat = false;
-  
+
   GoogleMapController? _mapController;
   static const LatLng _defaultLocation = LatLng(37.7749, -122.4194);
   LatLng? _currentLocation;
@@ -61,10 +67,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
 
   Future<void> _getCurrentLocation() async {
     try {
-
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-
         if (mounted) {
           _showLocationServiceDialog();
         }
@@ -73,7 +77,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         });
         return;
       }
-
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -93,7 +96,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         return;
       }
 
-
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -102,7 +104,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         _currentLocation = LatLng(position.latitude, position.longitude);
         _isLoadingLocation = false;
       });
-
 
       if (_mapController != null && _currentLocation != null) {
         _mapController!.animateCamera(
@@ -227,7 +228,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         jobData['tasks']?.toString() ??
         '';
 
-
     List<String> skillsList = [];
     if (jobData['skills_required'] != null) {
       if (jobData['skills_required'] is List) {
@@ -266,7 +266,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         ? '₹${jobData['pay_amount']} / ${_formatPayType(jobData['pay_type']?.toString() ?? 'per_day')}'
         : 'Not specified';
 
-
     int parseInt(dynamic value, int defaultValue) {
       if (value == null) return defaultValue;
       if (value is int) return value;
@@ -283,7 +282,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         'Location not specified';
 
     final String address = jobData['address']?.toString() ?? '';
-
 
     List<String> documentsList = [];
     if (jobData['documents_required'] != null) {
@@ -312,7 +310,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
         jobData['applied']?.toString().toLowerCase() == 'true';
     final int advanceAmount = parseInt(jobData['advance_amount'], 0);
 
-
     double parseDouble(dynamic value, double defaultValue) {
       if (value == null) return defaultValue;
       if (value is double) return value;
@@ -329,7 +326,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
     final String employerPhone = employerData?['phone']?.toString() ??
         jobData['employer_phone']?.toString() ??
         '';
-
 
     String duration = 'Not specified';
     if (jobData['start_date'] != null && jobData['end_date'] != null) {
@@ -363,7 +359,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
           child: SafeArea(
             child: Column(
               children: [
-
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -386,11 +381,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                         ),
                       ),
                       const SizedBox(width: 48),
-
                     ],
                   ),
                 ),
-
                 if (_isLoading)
                   Padding(
                     padding:
@@ -401,15 +394,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                       color: Colors.green[700],
                     ),
                   ),
-
                 if (_errorMessage != null)
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: _buildErrorBanner(_errorMessage!),
                   ),
-
-
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
@@ -429,7 +419,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -455,7 +444,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                                     Row(
                                       children: [
                                         Expanded(
-
                                           child: Text(
                                             employerName,
                                             maxLines: 1,
@@ -468,7 +456,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-
                                       ],
                                     ),
                                     if (employerPhone.isNotEmpty) ...[
@@ -484,35 +471,36 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              ElevatedButton.icon(
-                                onPressed:
-                                    employerPhone.isNotEmpty ? () {} : null,
-                                icon: const Icon(Icons.phone, size: 16),
-                                label: const Text(
-                                  'CONTACT',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: employerPhone.isNotEmpty
-                                      ? Colors.green[700]
-                                      : Colors.grey[400],
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                              if (widget.showActions) ...[
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed:
+                                      employerPhone.isNotEmpty ? () {} : null,
+                                  icon: const Icon(Icons.phone, size: 16),
+                                  label: const Text(
+                                    'CONTACT',
+                                    style: TextStyle(fontSize: 12),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: employerPhone.isNotEmpty
+                                        ? Colors.green[700]
+                                        : Colors.grey[400],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    elevation: 0,
                                   ),
-                                  elevation: 0,
                                 ),
-                              ),
+                              ],
                             ],
                           ),
 
                           const SizedBox(height: 12),
-
 
                           Row(
                             children: [
@@ -545,7 +533,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                           const SizedBox(height: 20),
                           const Divider(color: Colors.grey, thickness: 1),
                           const SizedBox(height: 20),
-
 
                           if (skillsList.isNotEmpty || description.isNotEmpty)
                             _buildJobDetailRow(
@@ -669,7 +656,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                           const Divider(color: Colors.grey, thickness: 1),
                           const SizedBox(height: 20),
 
-
                           const Text(
                             'Location',
                             style: TextStyle(
@@ -706,7 +692,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
                                   ),
                                   if (_currentLocation != null)
                                     Marker(
-                                      markerId: const MarkerId('current_location'),
+                                      markerId:
+                                          const MarkerId('current_location'),
                                       position: _currentLocation!,
                                       infoWindow: const InfoWindow(
                                         title: 'Your Current Location',
@@ -739,86 +726,92 @@ class _JobDetailScreenState extends State<JobDetailScreen> with WidgetsBindingOb
 
                           const SizedBox(height: 20),
 
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: isApplied
-                                      ? null
-                                      : () => _handleApplyTap(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isApplied
-                                        ? Colors.grey[400]
-                                        : Colors.green[800],
-                                    foregroundColor: isApplied
-                                        ? Colors.black54
-                                        : Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        isApplied ? 'Already Applied' : 'Apply',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                          if (widget.showActions)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: isApplied
+                                        ? null
+                                        : () => _handleApplyTap(),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: isApplied
+                                          ? Colors.grey[400]
+                                          : Colors.green[800],
+                                      foregroundColor: isApplied
+                                          ? Colors.black54
+                                          : Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Icon(
-                                        isApplied
-                                            ? Icons.check_circle_outline
-                                            : Icons.arrow_forward,
-                                        size: 18,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed:
-                                      _isOpeningChat ? null : _handleMessageTap,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF6C945),
-                                    foregroundColor: Colors.black87,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      elevation: 2,
                                     ),
-                                    elevation: 2,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Flexible(
-                                        child: Text(
-                                          'Message Employer',
-                                          style: TextStyle(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          isApplied
+                                              ? 'Already Applied'
+                                              : 'Apply',
+                                          style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.arrow_forward, size: 18),
-                                    ],
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          isApplied
+                                              ? Icons.check_circle_outline
+                                              : Icons.arrow_forward,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _isOpeningChat
+                                        ? null
+                                        : _handleMessageTap,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF6C945),
+                                      foregroundColor: Colors.black87,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Flexible(
+                                          child: Text(
+                                            'Message Employer',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_forward,
+                                            size: 18),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
 
                           const SizedBox(height: 20),
 

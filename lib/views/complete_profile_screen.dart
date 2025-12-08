@@ -251,28 +251,6 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
         );
         return;
       }
-
-      // Validate flat selection
-      if (selectedFlat == null || selectedFlatId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please select a flat"),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Validate floor number
-      if (floorNumberController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please enter floor number"),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
     }
 
     // Validate residential status
@@ -318,7 +296,8 @@ class _CompleteProfileScreenState extends State<_CompleteProfileScreen> {
       "district": selectedDistrict ?? "",
       "payment_method": selectedPaymentMethod ?? "Cash",
       // Flat and floor information
-      "flat_id": selectedFlatId,
+      // Flat/floor are optional; send empty strings when not provided
+      "flat_id": selectedFlatId?.toString() ?? "",
       "floor_number": floorNumberController.text.trim(),
     };
 

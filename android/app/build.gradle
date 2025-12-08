@@ -61,9 +61,10 @@ android {
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
         
-        // Inject API key from .env into AndroidManifest.xml
+        // Inject manifest placeholders (API key + default Flutter application class)
         manifestPlaceholders = [
-            GOOGLE_MAP_API_KEY: googleMapsApiKey
+            GOOGLE_MAP_API_KEY: googleMapsApiKey,
+            applicationName: "io.flutter.app.FlutterApplication"
         ]
     }
 
