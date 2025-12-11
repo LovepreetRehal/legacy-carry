@@ -1,6 +1,7 @@
 // views/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:legacy_carry/views/employe/select_type_screen.dart';
+import 'package:legacy_carry/views/guard/complete_profile_screen.dart';
 import 'package:legacy_carry/views/viewmodels/login_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -219,10 +220,16 @@ class _EmployeeRegisterContentState extends State<_SignInWithNumberScreen> {
                   // ✅ Sign in with email (Text button)
                   TextButton(
                     onPressed: () {
+                      // Navigator.pushReplacement(
+                      //   context,
+                      //   MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+                      // );
+
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const SelectTypeScreen()),
+                        MaterialPageRoute(builder: (context) => const CompleteProfileScreen()),
                       );
+
                     },
                     child: const Text(
                       "Sign Up",
